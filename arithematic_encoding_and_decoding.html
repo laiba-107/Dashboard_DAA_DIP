@@ -1,0 +1,1620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Arithmetic Encoding & Decoding Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Bootstrap 5 (for layout & components) -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+
+  <!-- Tabulator (for interactive tables) -->
+  <link
+    href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator_midnight.min.css"
+    rel="stylesheet"
+  />
+
+  <!-- Custom Dark Theme Styles -->
+  <style>
+    :root {
+      --bg: #020617;
+      --panel: #020617;
+      --panel-soft: #020617;
+      --border: #1f2937;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #38bdf8;
+      --accent-2: #60a5fa;
+      --danger: #f97373;
+    }
+
+    body {
+      background: radial-gradient(circle at top left, #0f172a, #020617 40%);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, Ubuntu, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    .app-header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .app-card {
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 0.75rem;
+      border: 1px solid var(--border);
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.8);
+    }
+
+    .app-card-soft {
+      background: rgba(15, 23, 42, 0.75);
+      border-radius: 0.75rem;
+      border: 1px solid #111827;
+    }
+
+    .form-control,
+    .form-select {
+      background-color: #020617;
+      border-color: #1f2937;
+      color: var(--text);
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+      background-color: #020617;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 0.2rem rgba(56, 189, 248, 0.25);
+      color: var(--text);
+    }
+
+    .form-label {
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+
+    .btn-accent {
+      background: linear-gradient(135deg, #38bdf8, #6366f1);
+      border: none;
+      color: #0b1120;
+      font-weight: 600;
+    }
+
+    .btn-accent:hover {
+      filter: brightness(1.1);
+      color: #020617;
+    }
+
+    .btn-outline-accent {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-outline-accent:hover {
+      background: var(--accent);
+      color: #020617;
+    }
+
+    .nav-tabs {
+      border-bottom-color: var(--border);
+    }
+
+    .nav-tabs .nav-link {
+      border: none;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .nav-tabs .nav-link.active {
+      color: var(--accent);
+      background-color: transparent;
+      border-bottom: 2px solid var(--accent);
+    }
+
+    .alert-dark {
+      background-color: #020617;
+      border-color: var(--border);
+      color: var(--text);
+    }
+
+    .formula {
+      font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+      font-size: 0.88rem;
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 0.5rem;
+      padding: 0.45rem 0.6rem;
+      border: 1px solid #111827;
+      display: inline-block;
+      margin-bottom: 0.25rem;
+    }
+
+    .interval-diagram {
+      background: radial-gradient(circle at top, #020617 0, #020617 40%, #020617);
+      min-height: 360px;
+      max-height: 640px;
+      overflow: auto;
+    }
+
+    #encoding-table,
+    #decoding-table {
+      max-height: 260px;
+    }
+
+    .tabulator {
+      background-color: transparent !important;
+    }
+
+    .tabulator .tabulator-header {
+      background-color: #020617;
+      border-bottom: 1px solid #111827 !important;
+    }
+
+    .tabulator .tabulator-row {
+      background-color: #020617;
+      border-bottom: 1px solid #020617;
+    }
+
+    .tabulator-row.tabulator-selected {
+      background-color: rgba(56, 189, 248, 0.18) !important;
+    }
+
+    .tabulator .tabulator-cell {
+      border-right: 1px solid #020617;
+      color: #e5e7eb;
+      font-size: 0.8rem;
+    }
+
+    .small-help {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .badge-tag {
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--accent);
+      border-radius: 999px;
+      padding: 0.1rem 0.5rem;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .app-section-title {
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--muted);
+    }
+
+    .divider-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid py-3">
+    <!-- Header -->
+    <div class="app-header d-flex justify-content-between align-items-center">
+      <div>
+        <div class="badge-tag mb-1">Algorithms Lab • Entropy & Compression</div>
+        <h1 class="h4 mb-0">Arithmetic Encoding &amp; Decoding Dashboard</h1>
+        <p class="small-help mb-0">
+          Interactive visualization of probability model, interval subdivision,
+          tag computation, and reconstruction via decoding.
+        </p>
+      </div>
+      <div class="text-end">
+        <span class="small-help">
+          Designed to be embedded as an
+          <span class="fw-semibold text-info">“Arithmetic Coding”</span> tab
+          inside your Algorithms Dashboard.
+        </span>
+      </div>
+    </div>
+
+    <!-- Description / Formulas -->
+    <div class="row mb-3">
+      <div class="col-12">
+        <div class="app-card-soft p-3">
+          <div class="row">
+            <div class="col-lg-7">
+              <h2 class="app-section-title mb-2">Core Idea</h2>
+              <p class="mb-2 small">
+                Arithmetic coding represents an entire message as a single
+                fractional number in <span class="fw-semibold">[0, 1)</span>,
+                by repeatedly subdividing the interval using a
+                <span class="fw-semibold">probability model</span>.
+              </p>
+              <ul class="small mb-1">
+                <li>
+                  Build a symbol–probability model and initial sub-intervals in
+                  <span class="fw-semibold">[0,1)</span>.
+                </li>
+                <li>
+                  For each symbol, update the interval using
+                  <span class="fw-semibold">D</span> (current range width) and
+                  cumulative probabilities.
+                </li>
+                <li>
+                  Any value in the final interval (e.g. the
+                  <span class="fw-semibold">tag</span>) encodes the whole
+                  message.
+                </li>
+                <li>
+                  Decoding reverses this: repeatedly locate the tag in the
+                  sub-intervals to recover each symbol.
+                </li>
+              </ul>
+            </div>
+            <div class="col-lg-5 border-start border-secondary-subtle ps-lg-3 mt-3 mt-lg-0">
+              <h2 class="app-section-title mb-2">Key Formulas</h2>
+              <div>
+                <div class="formula">
+                  D = Upper<span class="text-secondary">₍current₎</span> −
+                  Lower<span class="text-secondary">₍current₎</span>
+                </div>
+                <div class="small-help mb-2">
+                  <span class="fw-semibold">D</span> is the width of the
+                  current interval.
+                </div>
+
+                <div class="formula">
+                  NewLower(symbol) = Lower + D × CDF<sub>before</sub>(symbol)
+                </div>
+                <div class="formula">
+                  NewUpper(symbol) = Lower + D × CDF<sub>up to</sub>(symbol)
+                </div>
+                <div class="small-help mb-2">
+                  Intervals are scaled and shifted copies of the base
+                  <span class="fw-semibold">[0,1)</span> sub-intervals.
+                </div>
+
+                <div class="formula">
+                  Tag = (Upper<span class="text-secondary">₍final₎</span> +
+                  Lower<span class="text-secondary">₍final₎</span>) / 2
+                </div>
+                <div class="small-help mb-0">
+                  Any point inside the final interval works; here we use the
+                  midpoint.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="row g-3">
+      <!-- Left: Inputs -->
+      <div class="col-lg-4">
+        <div class="app-card p-3 h-100">
+          <h2 class="app-section-title mb-2">Inputs</h2>
+
+          <!-- Message Input -->
+          <div class="mb-3">
+            <label for="message-input" class="form-label">
+              Message (symbols to encode)
+            </label>
+            <input
+              type="text"
+              id="message-input"
+              class="form-control form-control-sm"
+              placeholder="Example: ARBER or HELLO123"
+            />
+            <div class="small-help mt-1">
+              • Letters and digits only, no spaces. Example from slides:
+              <span class="text-info fw-semibold">ARBER</span>.
+            </div>
+          </div>
+
+          <!-- Probability Table -->
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <label class="form-label mb-0">
+                Symbol–Probability Model
+              </label>
+              <div class="btn-group btn-group-sm">
+                <button
+                  id="btn-add-row"
+                  type="button"
+                  class="btn btn-outline-accent btn-sm"
+                  title="Add a new symbol row"
+                >
+                  + Row
+                </button>
+                <button
+                  id="btn-autofill"
+                  type="button"
+                  class="btn btn-outline-secondary btn-sm"
+                  title="Build probabilities from message frequency"
+                >
+                  Auto-fill
+                </button>
+              </div>
+            </div>
+            <div class="small-help mb-1">
+              Probabilities should sum to <span class="fw-semibold">1.0</span>.
+              Each symbol must be unique.
+            </div>
+
+            <div class="table-responsive small">
+              <table class="table table-sm table-dark align-middle mb-0">
+                <thead>
+                  <tr class="text-secondary">
+                    <th style="width: 35%">Symbol</th>
+                    <th style="width: 45%">Probability</th>
+                    <th style="width: 20%" class="text-center">Remove</th>
+                  </tr>
+                </thead>
+                <tbody id="prob-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Decoding Inputs -->
+          <div class="mb-3">
+            <div class="divider-label mb-1">Decoding Inputs</div>
+            <div class="row g-2">
+              <div class="col-7">
+                <label for="decode-tag" class="form-label mb-1">
+                  Tag (encoded value)
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  id="decode-tag"
+                  class="form-control form-control-sm"
+                  placeholder="e.g. 0.14496"
+                />
+              </div>
+              <div class="col-5">
+                <label for="decode-length" class="form-label mb-1">
+                  Message length
+                </label>
+                <input
+                  type="number"
+                  id="decode-length"
+                  min="1"
+                  class="form-control form-control-sm"
+                  placeholder="e.g. 5"
+                />
+              </div>
+            </div>
+            <div class="small-help mt-1">
+              For verification, you can reuse the tag from encoding and the
+              original message length.
+            </div>
+          </div>
+
+          <!-- Control Buttons -->
+          <div class="mb-2">
+            <div class="d-grid gap-2">
+              <button
+                id="btn-encode"
+                type="button"
+                class="btn btn-accent btn-sm"
+              >
+                Encode Message
+              </button>
+              <button
+                id="btn-decode"
+                type="button"
+                class="btn btn-outline-accent btn-sm"
+              >
+                Decode from Tag
+              </button>
+              <button
+                id="btn-reset"
+                type="button"
+                class="btn btn-outline-secondary btn-sm"
+              >
+                Reset to ARBER Example
+              </button>
+            </div>
+          </div>
+
+          <!-- Error / Status -->
+          <div
+            id="error-box"
+            class="alert alert-danger py-1 px-2 small d-none"
+            role="alert"
+          ></div>
+          <div
+            id="status-box"
+            class="alert alert-dark py-1 px-2 small d-none mt-1"
+            role="alert"
+          ></div>
+
+          <div class="small-help mt-2">
+            <span class="fw-semibold">Tip:</span> You can integrate this entire
+            panel as the “input” column of your Algorithms Lab dashboard and
+            keep the visualization on the right.
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Visualization & Results -->
+      <div class="col-lg-8">
+        <div class="app-card p-3 h-100">
+          <ul class="nav nav-tabs mb-3" id="resultTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button
+                class="nav-link active"
+                id="steps-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#steps-pane"
+                type="button"
+                role="tab"
+              >
+                Step Table
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button
+                class="nav-link"
+                id="diagram-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#diagram-pane"
+                type="button"
+                role="tab"
+              >
+                Interval Diagram
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button
+                class="nav-link"
+                id="summary-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#summary-pane"
+                type="button"
+                role="tab"
+              >
+                Summary
+              </button>
+            </li>
+          </ul>
+
+          <div class="tab-content">
+            <!-- Step Tables -->
+            <div
+              class="tab-pane fade show active"
+              id="steps-pane"
+              role="tabpanel"
+            >
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <h2 class="app-section-title mb-0">
+                      Encoding Steps
+                    </h2>
+                    <span class="small-help">
+                      D, new interval per symbol
+                    </span>
+                  </div>
+                  <div id="encoding-table"></div>
+                </div>
+                <div class="col-md-6">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <h2 class="app-section-title mb-0">
+                      Decoding Steps
+                    </h2>
+                    <span class="small-help">
+                      Tag-driven symbol selection
+                    </span>
+                  </div>
+                  <div id="decoding-table"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Interval Diagram -->
+            <div
+              class="tab-pane fade"
+              id="diagram-pane"
+              role="tabpanel"
+            >
+              <div
+                class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2"
+              >
+                <div class="btn-group btn-group-sm" role="group">
+                  <button
+                    type="button"
+                    class="btn btn-outline-accent btn-sm"
+                    id="btn-view-encode"
+                  >
+                    View Encoding
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    id="btn-view-decode"
+                  >
+                    View Decoding
+                  </button>
+                </div>
+                <div class="small-help">
+                  Mode:
+                  <span id="diagram-mode-label" class="text-info fw-semibold"
+                    >Encoding</span
+                  >
+                  • Current:
+                  <span id="current-step-label" class="text-secondary"
+                    >–</span
+                  >
+                </div>
+                <div class="btn-group btn-group-sm" role="group">
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    id="btn-prev-step"
+                    title="Previous step"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-outline-accent btn-sm"
+                    id="btn-play"
+                    title="Play animation"
+                  >
+                    ▶
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    id="btn-pause"
+                    title="Pause animation"
+                  >
+                    ❚❚
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    id="btn-next-step"
+                    title="Next step"
+                  >
+                    ›
+                  </button>
+                </div>
+              </div>
+              <div
+                id="interval-diagram"
+                class="interval-diagram border border-secondary rounded"
+              ></div>
+              <div class="small-help mt-2">
+                Columns represent successive encoding / decoding steps. Each
+                column shows the interval [0,1] subdivided vertically. The
+                highlighted yellow bar is the chosen symbol; diagonal lines map
+                that interval to the next column, just like the ARBER slide.
+              </div>
+            </div>
+
+            <!-- Summary -->
+            <div
+              class="tab-pane fade"
+              id="summary-pane"
+              role="tabpanel"
+            >
+              <div id="summary-content" class="small">
+                <p class="mb-2">
+                  Run <span class="fw-semibold">Encode</span> or
+                  <span class="fw-semibold">Decode</span> to see a summary of
+                  results here — including the final interval, tag, and
+                  round-trip verification (encode → decode).
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
+  <!-- App Logic -->
+  <script>
+    // ===========================
+    // Global State
+    // ===========================
+    let encodeSteps = [];
+    let decodeSteps = [];
+    let encodeTable = null;
+    let decodeTable = null;
+
+    let currentMode = "encode"; // "encode" or "decode"
+    let currentStepIndex = 0;
+    let animationTimer = null;
+    const animationDelay = 900; // ms
+
+    let lastEncoded = null;
+    let lastDecoded = null;
+
+    // ===========================
+    // Utility: UI helpers
+    // ===========================
+    function showError(msg) {
+      const box = document.getElementById("error-box");
+      box.textContent = msg;
+      box.classList.remove("d-none");
+      const status = document.getElementById("status-box");
+      status.classList.add("d-none");
+    }
+
+    function clearError() {
+      const box = document.getElementById("error-box");
+      box.textContent = "";
+      box.classList.add("d-none");
+    }
+
+    function showStatus(msg) {
+      const status = document.getElementById("status-box");
+      status.textContent = msg;
+      status.classList.remove("d-none");
+    }
+
+    function clearStatus() {
+      const status = document.getElementById("status-box");
+      status.textContent = "";
+      status.classList.add("d-none");
+    }
+
+    function numberFormatter(cell) {
+      const v = cell.getValue();
+      if (typeof v !== "number" || !isFinite(v)) return v;
+      return v.toFixed(5);
+    }
+
+    // ===========================
+    // Probability Table Handling
+    // ===========================
+    function addProbRow(symbol = "", prob = "") {
+      const tbody = document.getElementById("prob-table-body");
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>
+          <input type="text" maxlength="1"
+                 class="form-control form-control-sm symbol-input"
+                 value="${symbol}"
+                 placeholder="A" />
+        </td>
+        <td>
+          <input type="number" step="any"
+                 class="form-control form-control-sm prob-input"
+                 value="${prob}"
+                 placeholder="0.2" />
+        </td>
+        <td class="text-center">
+          <button type="button"
+                  class="btn btn-sm btn-outline-danger btn-remove-row">&times;</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+
+      tr.querySelector(".btn-remove-row").addEventListener("click", () => {
+        tr.remove();
+      });
+    }
+
+    function getProbTableFromDOM() {
+      const rows = Array.from(
+        document.querySelectorAll("#prob-table-body tr")
+      );
+      const probTable = [];
+      const symbolsSeen = new Set();
+      let sum = 0;
+      for (const row of rows) {
+        const symInput = row.querySelector(".symbol-input");
+        const probInput = row.querySelector(".prob-input");
+        const symbol = (symInput.value || "").trim();
+        const pStr = (probInput.value || "").trim();
+
+        if (symbol === "") continue;
+        const prob = parseFloat(pStr);
+        if (!symbol.match(/^[A-Za-z0-9]$/)) {
+          throw new Error(
+            `Invalid symbol "${symbol}". Use single letters or digits.`
+          );
+        }
+        if (!isFinite(prob) || prob <= 0) {
+          throw new Error(`Probability for "${symbol}" must be > 0.`);
+        }
+        if (symbolsSeen.has(symbol)) {
+          throw new Error(`Duplicate symbol "${symbol}" in probability table.`);
+        }
+        symbolsSeen.add(symbol);
+        probTable.push({ symbol, prob });
+        sum += prob;
+      }
+
+      if (probTable.length === 0) {
+        throw new Error("Provide at least one symbol with a probability.");
+      }
+
+      const eps = 1e-6;
+      if (Math.abs(sum - 1) > eps) {
+        throw new Error(
+          `Probabilities must sum to 1. Current sum = ${sum.toFixed(6)}`
+        );
+      }
+
+      // Build base intervals in [0,1)
+      let cumulative = 0;
+      const baseIntervals = {};
+      for (const row of probTable) {
+        const lower = cumulative;
+        const upper = cumulative + row.prob;
+        baseIntervals[row.symbol] = { lower, upper };
+        cumulative = upper;
+      }
+
+      return { probTable, baseIntervals };
+    }
+
+    function autofillFromMessage() {
+      const msg = document
+        .getElementById("message-input")
+        .value.trim()
+        .toUpperCase();
+      if (!msg) {
+        showError("Enter a message before using Auto-fill.");
+        return;
+      }
+      if (!/^[A-Za-z0-9]+$/.test(msg)) {
+        showError("Message must contain only letters and digits.");
+        return;
+      }
+
+      const counts = {};
+      for (const ch of msg) {
+        counts[ch] = (counts[ch] || 0) + 1;
+      }
+
+      const len = msg.length;
+      const tbody = document.getElementById("prob-table-body");
+      tbody.innerHTML = "";
+      Object.keys(counts).forEach((sym) => {
+        const p = counts[sym] / len;
+        addProbRow(sym, p.toFixed(4));
+      });
+      clearError();
+      showStatus(
+        "Probabilities auto-filled from message frequency (counts / length)."
+      );
+    }
+
+    // ===========================
+    // Arithmetic Encoding & Decoding Core
+    // ===========================
+    function runEncodingSteps(message, probTable, baseIntervals) {
+      let lower = 0.0;
+      let upper = 1.0;
+      const steps = [];
+
+      for (let i = 0; i < message.length; i++) {
+        const ch = message[i];
+        const D = upper - lower;
+        const intervals = [];
+
+        // Build scaled intervals for this step
+        for (const row of probTable) {
+          const base = baseIntervals[row.symbol];
+          const il = lower + D * base.lower;
+          const iu = lower + D * base.upper;
+          intervals.push({
+            symbol: row.symbol,
+            lower: il,
+            upper: iu,
+          });
+        }
+
+        const chosen = intervals.find((iv) => iv.symbol === ch);
+        if (!chosen) {
+          throw new Error(
+            `Symbol "${ch}" not found in probability table at step ${i + 1}.`
+          );
+        }
+
+        const newLower = chosen.lower;
+        const newUpper = chosen.upper;
+
+        steps.push({
+          step: i + 1,
+          symbol: ch,
+          prevLower: lower,
+          prevUpper: upper,
+          D: D,
+          newLower: newLower,
+          newUpper: newUpper,
+          intervals: intervals,
+        });
+
+        lower = newLower;
+        upper = newUpper;
+      }
+
+      const tag = (lower + upper) / 2;
+      return { steps, lower, upper, tag };
+    }
+
+    function runDecodingSteps(tag, length, probTable, baseIntervals) {
+      let lower = 0.0;
+      let upper = 1.0;
+      const steps = [];
+      let decoded = "";
+
+      for (let i = 0; i < length; i++) {
+        const D = upper - lower;
+        const intervals = [];
+
+        for (const row of probTable) {
+          const base = baseIntervals[row.symbol];
+          const il = lower + D * base.lower;
+          const iu = lower + D * base.upper;
+          intervals.push({
+            symbol: row.symbol,
+            lower: il,
+            upper: iu,
+          });
+        }
+
+        let chosen = null;
+        const eps = 1e-12;
+        for (const iv of intervals) {
+          if (tag >= iv.lower - eps && tag < iv.upper + eps) {
+            chosen = iv;
+            break;
+          }
+        }
+
+        if (!chosen) {
+          throw new Error(
+            `Tag ${tag} did not fall into any interval at decoding step ${
+              i + 1
+            }.`
+          );
+        }
+
+        decoded += chosen.symbol;
+
+        const newLower = chosen.lower;
+        const newUpper = chosen.upper;
+
+        steps.push({
+          step: i + 1,
+          symbol: chosen.symbol,
+          tag: tag,
+          prevLower: lower,
+          prevUpper: upper,
+          D: D,
+          newLower: newLower,
+          newUpper: newUpper,
+          intervals: intervals,
+        });
+
+        lower = newLower;
+        upper = newUpper;
+      }
+
+      return { steps, message: decoded, lower, upper };
+    }
+
+    // ===========================
+    // Tabulator Table Rendering
+    // ===========================
+    function renderEncodingTable(steps) {
+      const container = document.getElementById("encoding-table");
+      container.innerHTML = "";
+
+      if (!steps || steps.length === 0) {
+        container.innerHTML =
+          '<p class="small-help mb-0">No encoding steps yet. Click <span class="fw-semibold">Encode Message</span> to generate.</p>';
+        return;
+      }
+
+      if (encodeTable) {
+        encodeTable.destroy();
+      }
+
+      encodeTable = new Tabulator("#encoding-table", {
+        data: steps,
+        index: "step",
+        layout: "fitColumns",
+        height: 260,
+        selectable: 1,
+        columns: [
+          { title: "Step", field: "step", width: 60 },
+          { title: "Symbol", field: "symbol", width: 70 },
+          {
+            title: "Prev Lower",
+            field: "prevLower",
+            formatter: numberFormatter,
+          },
+          {
+            title: "Prev Upper",
+            field: "prevUpper",
+            formatter: numberFormatter,
+          },
+          {
+            title: "D",
+            field: "D",
+            formatter: numberFormatter,
+          },
+          {
+            title: "New Lower",
+            field: "newLower",
+            formatter: numberFormatter,
+          },
+          {
+            title: "New Upper",
+            field: "newUpper",
+            formatter: numberFormatter,
+          },
+        ],
+        rowClick: function (e, row) {
+          currentMode = "encode";
+          updateDiagramModeLabel();
+          const idx = row.getData().step - 1;
+          goToStep(idx);
+        },
+      });
+    }
+
+    function renderDecodingTable(steps) {
+      const container = document.getElementById("decoding-table");
+      container.innerHTML = "";
+
+      if (!steps || steps.length === 0) {
+        container.innerHTML =
+          '<p class="small-help mb-0">No decoding steps yet. Provide a tag and length, then click <span class="fw-semibold">Decode from Tag</span>.</p>';
+        return;
+      }
+
+      if (decodeTable) {
+        decodeTable.destroy();
+      }
+
+      decodeTable = new Tabulator("#decoding-table", {
+        data: steps,
+        index: "step",
+        layout: "fitColumns",
+        height: 260,
+        selectable: 1,
+        columns: [
+          { title: "Step", field: "step", width: 60 },
+          { title: "Symbol", field: "symbol", width: 70 },
+          { title: "Tag", field: "tag", formatter: numberFormatter },
+          {
+            title: "Prev Lower",
+            field: "prevLower",
+            formatter: numberFormatter,
+          },
+          {
+            title: "Prev Upper",
+            field: "prevUpper",
+            formatter: numberFormatter,
+          },
+          {
+            title: "D",
+            field: "D",
+            formatter: numberFormatter,
+          },
+          {
+            title: "New Lower",
+            field: "newLower",
+            formatter: numberFormatter,
+          },
+          {
+            title: "New Upper",
+            field: "newUpper",
+            formatter: numberFormatter,
+          },
+        ],
+        rowClick: function (e, row) {
+          currentMode = "decode";
+          updateDiagramModeLabel();
+          const idx = row.getData().step - 1;
+          goToStep(idx);
+        },
+      });
+    }
+
+    // ===========================
+    // Interval Diagram (D3) – vertical columns like slide
+    // ===========================
+    function renderIntervalDiagram(steps, currentIndex) {
+      const container = document.getElementById("interval-diagram");
+      container.innerHTML = "";
+
+      if (!steps || steps.length === 0) {
+        container.innerHTML =
+          '<p class="small-help p-2 mb-0">No steps to display. Run encoding or decoding first.</p>';
+        document.getElementById("current-step-label").textContent = "–";
+        return;
+      }
+
+      currentIndex = Math.max(0, Math.min(currentIndex, steps.length - 1));
+
+      const width = container.clientWidth || 800;
+      const height = Math.max(260, 420);
+
+      const svg = d3
+        .select("#interval-diagram")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+      const margin = { top: 40, right: 80, bottom: 40, left: 60 };
+      const innerWidth = width - margin.left - margin.right;
+      const innerHeight = height - margin.top - margin.bottom;
+
+      const columnCount = steps.length;
+      const columnSpacing = innerWidth / (columnCount + 1);
+
+      const xForStep = (i) => margin.left + i * columnSpacing;
+
+      const yScale = d3
+        .scaleLinear()
+        .domain([0, 1])
+        .range([margin.top + innerHeight, margin.top]); // 0 bottom, 1 top
+
+      // Draw vertical axis labels (0 & 1)
+      svg
+        .append("text")
+        .attr("x", margin.left - 30)
+        .attr("y", yScale(1) + 4)
+        .attr("fill", "#9ca3af")
+        .style("font-size", "10px")
+        .text("1.0");
+
+      svg
+        .append("text")
+        .attr("x", margin.left - 30)
+        .attr("y", yScale(0) + 3)
+        .attr("fill", "#9ca3af")
+        .style("font-size", "10px")
+        .text("0.0");
+
+      // Vertical baseline for each step
+      steps.forEach((s, i) => {
+        const x = xForStep(i);
+        svg
+          .append("line")
+          .attr("x1", x)
+          .attr("x2", x)
+          .attr("y1", yScale(0))
+          .attr("y2", yScale(1))
+          .attr("stroke", "#4b5563")
+          .attr("stroke-width", 1.2);
+
+        // Step label
+        svg
+          .append("text")
+          .attr("x", x)
+          .attr("y", margin.top - 14)
+          .attr("text-anchor", "middle")
+          .attr("fill", i === currentIndex ? "#38bdf8" : "#9ca3af")
+          .style("font-size", "11px")
+          .text(`Step ${s.step}: ${s.symbol}`);
+      });
+
+      const barWidth = Math.min(26, columnSpacing * 0.55);
+
+      // Intervals (rectangles)
+      steps.forEach((s, i) => {
+        const xCenter = xForStep(i);
+        const x = xCenter - barWidth / 2;
+
+        s.intervals.forEach((iv) => {
+          const yTop = yScale(iv.upper);
+          const yBottom = yScale(iv.lower);
+          const h = Math.max(1, yBottom - yTop);
+
+          const isChosen = iv.symbol === s.symbol;
+          const isCurrentStep = i === currentIndex;
+
+          svg
+            .append("rect")
+            .attr("x", x)
+            .attr("y", yTop)
+            .attr("width", barWidth)
+            .attr("height", h)
+            .attr(
+              "fill",
+              isChosen
+                ? isCurrentStep
+                  ? "#fbbf24" // bright yellow for current chosen
+                  : "#fde68a"
+                : "#4b5563"
+            )
+            .attr("opacity", isChosen ? 0.95 : 0.6)
+            .attr("stroke", isChosen ? "#fbbf24" : "none")
+            .attr("rx", 2);
+
+          // Symbol label inside bar (only if bar is tall enough)
+          if (h > 14) {
+            svg
+              .append("text")
+              .attr("x", xCenter)
+              .attr("y", yTop + h / 2 + 3)
+              .attr("text-anchor", "middle")
+              .attr("fill", "#020617")
+              .style("font-size", "10px")
+              .style("font-weight", "600")
+              .text(iv.symbol);
+          }
+        });
+      });
+
+      // Connecting lines like slide: from chosen interval of step i to full bar of step i+1
+      steps.forEach((s, i) => {
+        if (i === steps.length - 1) return;
+        const xCurrent = xForStep(i);
+        const xNext = xForStep(i + 1);
+
+        const chosenNow = s.intervals.find((iv) => iv.symbol === s.symbol);
+        if (!chosenNow) return;
+
+        const yTopNow = yScale(chosenNow.upper);
+        const yBottomNow = yScale(chosenNow.lower);
+
+        // connect to top/bottom of next full column [0,1]
+        const yTopNext = yScale(1);
+        const yBottomNext = yScale(0);
+
+        svg
+          .append("line")
+          .attr("x1", xCurrent + barWidth / 2)
+          .attr("y1", yTopNow)
+          .attr("x2", xNext - barWidth / 2)
+          .attr("y2", yTopNext)
+          .attr("stroke", "#9ca3af")
+          .attr("stroke-width", 0.8);
+
+        svg
+          .append("line")
+          .attr("x1", xCurrent + barWidth / 2)
+          .attr("y1", yBottomNow)
+          .attr("x2", xNext - barWidth / 2)
+          .attr("y2", yBottomNext)
+          .attr("stroke", "#9ca3af")
+          .attr("stroke-width", 0.8);
+      });
+
+      // Final tag bar on the very right for encoding mode (like orange bar in slide)
+      if (currentMode === "encode" && lastEncoded && typeof lastEncoded.tag === "number") {
+        const tagXCenter = xForStep(steps.length) + columnSpacing * 0.3;
+        const tagWidth = barWidth * 0.6;
+        const tagY = yScale(lastEncoded.tag);
+        const tagHeight = yScale(0) - yScale(1); // full column
+        svg
+          .append("line")
+          .attr("x1", tagXCenter)
+          .attr("x2", tagXCenter)
+          .attr("y1", yScale(0))
+          .attr("y2", yScale(1))
+          .attr("stroke", "#4b5563")
+          .attr("stroke-width", 1.2);
+
+        svg
+          .append("rect")
+          .attr("x", tagXCenter - tagWidth / 2)
+          .attr("y", tagY - 6)
+          .attr("width", tagWidth)
+          .attr("height", 12)
+          .attr("fill", "#fb923c")
+          .attr("opacity", 0.9)
+          .attr("rx", 2);
+
+        svg
+          .append("text")
+          .attr("x", tagXCenter)
+          .attr("y", margin.top - 14)
+          .attr("text-anchor", "middle")
+          .attr("fill", "#fb923c")
+          .style("font-size", "11px")
+          .text(`Tag ≈ ${lastEncoded.tag.toFixed(5)}`);
+      }
+
+      // Update label
+      document.getElementById(
+        "current-step-label"
+      ).textContent = `Step ${steps[currentIndex].step}`;
+    }
+
+    // ===========================
+    // Step Navigation & Animation
+    // ===========================
+    function updateDiagramModeLabel() {
+      const label = document.getElementById("diagram-mode-label");
+      label.textContent =
+        currentMode === "encode" ? "Encoding" : "Decoding";
+    }
+
+    function goToStep(index) {
+      const steps = currentMode === "encode" ? encodeSteps : decodeSteps;
+      if (!steps || steps.length === 0) return;
+
+      index = Math.max(0, Math.min(index, steps.length - 1));
+      currentStepIndex = index;
+      renderIntervalDiagram(steps, currentStepIndex);
+
+      if (currentMode === "encode" && encodeTable) {
+        encodeTable.deselectRow();
+        encodeTable.selectRow(steps[index].step);
+        encodeTable.scrollToRow(steps[index].step, "center", false);
+      } else if (currentMode === "decode" && decodeTable) {
+        decodeTable.deselectRow();
+        decodeTable.selectRow(steps[index].step);
+        decodeTable.scrollToRow(steps[index].step, "center", false);
+      }
+    }
+
+    function playAnimation() {
+      stopAnimation();
+      const steps = currentMode === "encode" ? encodeSteps : decodeSteps;
+      if (!steps || steps.length === 0) return;
+      let i = currentStepIndex;
+
+      animationTimer = setInterval(() => {
+        if (i >= steps.length) {
+          clearInterval(animationTimer);
+          animationTimer = null;
+          return;
+        }
+        goToStep(i);
+        i++;
+      }, animationDelay);
+    }
+
+    function stopAnimation() {
+      if (animationTimer) {
+        clearInterval(animationTimer);
+        animationTimer = null;
+      }
+    }
+
+    // ===========================
+    // Summary Rendering
+    // ===========================
+    function renderSummary() {
+      const container = document.getElementById("summary-content");
+      let html = "";
+
+      if (!lastEncoded && !lastDecoded) {
+        container.innerHTML =
+          '<p class="mb-2">No results yet. Use the controls on the left to <span class="fw-semibold">encode</span> a message or <span class="fw-semibold">decode</span> a tag.</p>';
+        return;
+      }
+
+      if (lastEncoded) {
+        html += `
+          <h6 class="mb-1 text-info">Encoding</h6>
+          <ul class="mb-2 small">
+            <li><span class="fw-semibold">Original message:</span> ${
+              lastEncoded.message
+            }</li>
+            <li><span class="fw-semibold">Final interval:</span> [${lastEncoded.lower.toFixed(
+              6
+            )}, ${lastEncoded.upper.toFixed(6)}]</li>
+            <li><span class="fw-semibold">Tag:</span> ${lastEncoded.tag.toFixed(
+              6
+            )}</li>
+            <li><span class="fw-semibold">Steps:</span> ${
+              lastEncoded.steps
+            } (one per symbol)</li>
+          </ul>
+        `;
+      }
+
+      if (lastDecoded) {
+        html += `
+          <h6 class="mb-1 text-warning">Decoding</h6>
+          <ul class="mb-2 small">
+            <li><span class="fw-semibold">Input tag:</span> ${lastDecoded.tag.toFixed(
+              6
+            )}</li>
+            <li><span class="fw-semibold">Message length:</span> ${
+              lastDecoded.length
+            }</li>
+            <li><span class="fw-semibold">Decoded message:</span> ${
+              lastDecoded.message
+            }</li>
+            <li><span class="fw-semibold">Final interval from decoding:</span> [${lastDecoded.lower.toFixed(
+              6
+            )}, ${lastDecoded.upper.toFixed(6)}]</li>
+          </ul>
+        `;
+      }
+
+      if (lastEncoded && lastDecoded) {
+        const match =
+          lastEncoded.message === lastDecoded.message ? "Yes" : "No";
+        html += `
+          <h6 class="mb-1 text-success">Round-trip Check</h6>
+          <ul class="mb-0 small">
+            <li><span class="fw-semibold">Encode → Tag → Decode gives same message?</span> ${match}</li>
+            <li class="small-help mt-1">
+              If probabilities and tag are identical, arithmetic coding is perfectly reversible;
+              small numerical differences can be due to floating-point rounding.
+            </li>
+          </ul>
+        `;
+      }
+
+      container.innerHTML = html;
+    }
+
+    // ===========================
+    // Encode / Decode Handlers
+    // ===========================
+    function encodeMessage() {
+      clearError();
+      clearStatus();
+
+      const msgRaw = document.getElementById("message-input").value;
+      const message = msgRaw.trim().toUpperCase();
+
+      if (!message) {
+        showError("Enter a message to encode.");
+        return;
+      }
+      if (!/^[A-Za-z0-9]+$/.test(message)) {
+        showError("Message must contain only letters and digits (no spaces).");
+        return;
+      }
+
+      let probTable, baseIntervals;
+      try {
+        const res = getProbTableFromDOM();
+        probTable = res.probTable;
+        baseIntervals = res.baseIntervals;
+      } catch (err) {
+        showError(err.message);
+        return;
+      }
+
+      // Ensure all message symbols exist in prob table
+      const probSymbols = new Set(probTable.map((r) => r.symbol));
+      for (const ch of message) {
+        if (!probSymbols.has(ch)) {
+          showError(
+            `Symbol "${ch}" in message has no probability defined in the table.`
+          );
+          return;
+        }
+      }
+
+      try {
+        const { steps, lower, upper, tag } = runEncodingSteps(
+          message,
+          probTable,
+          baseIntervals
+        );
+        encodeSteps = steps;
+        currentMode = "encode";
+        updateDiagramModeLabel();
+        currentStepIndex = 0;
+
+        // Save last encoded info
+        lastEncoded = {
+          message,
+          lower,
+          upper,
+          tag,
+          steps: steps.length,
+        };
+
+        // Fill decode inputs for convenience
+        document.getElementById("decode-tag").value = tag.toFixed(6);
+        document.getElementById("decode-length").value = message.length;
+
+        // Render encoding table and diagram
+        renderEncodingTable(encodeSteps);
+        goToStep(0);
+
+        // Also run decode immediately for verification using same model
+        const dec = runDecodingSteps(
+          tag,
+          message.length,
+          probTable,
+          baseIntervals
+        );
+        decodeSteps = dec.steps;
+        renderDecodingTable(decodeSteps);
+        lastDecoded = {
+          tag,
+          length: message.length,
+          message: dec.message,
+          lower: dec.lower,
+          upper: dec.upper,
+        };
+
+        renderSummary();
+        showStatus(
+          `Encoding successful. Tag = ${tag.toFixed(
+            6
+          )}. Decoding with the same tag completed for verification.`
+        );
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    function decodeFromTag() {
+      clearError();
+      clearStatus();
+
+      const tagStr = document.getElementById("decode-tag").value.trim();
+      const lenStr = document.getElementById("decode-length").value.trim();
+
+      if (!tagStr || !lenStr) {
+        showError("Provide both a tag and the message length for decoding.");
+        return;
+      }
+
+      const tag = parseFloat(tagStr);
+      const length = parseInt(lenStr, 10);
+
+      if (!isFinite(tag) || tag < 0 || tag > 1) {
+        showError("Tag must be a number in [0,1].");
+        return;
+      }
+      if (!Number.isInteger(length) || length <= 0) {
+        showError("Message length for decoding must be a positive integer.");
+        return;
+      }
+
+      let probTable, baseIntervals;
+      try {
+        const res = getProbTableFromDOM();
+        probTable = res.probTable;
+        baseIntervals = res.baseIntervals;
+      } catch (err) {
+        showError(err.message);
+        return;
+      }
+
+      try {
+        const { steps, message, lower, upper } = runDecodingSteps(
+          tag,
+          length,
+          probTable,
+          baseIntervals
+        );
+        decodeSteps = steps;
+        currentMode = "decode";
+        updateDiagramModeLabel();
+        currentStepIndex = 0;
+
+        // Save last decoded
+        lastDecoded = {
+          tag,
+          length,
+          message,
+          lower,
+          upper,
+        };
+
+        renderDecodingTable(decodeSteps);
+        goToStep(0);
+        renderSummary();
+        showStatus(
+          `Decoding successful. Decoded message: "${message}".`
+        );
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    // ===========================
+    // Reset to ARBER Example
+    // ===========================
+    function resetToExample() {
+      stopAnimation();
+      clearError();
+      clearStatus();
+
+      document.getElementById("message-input").value = "ARBER";
+
+      const tbody = document.getElementById("prob-table-body");
+      tbody.innerHTML = "";
+
+      // ARBER example with probabilities: A=0.2, B=0.2, E=0.2, R=0.4
+      addProbRow("A", "0.2");
+      addProbRow("B", "0.2");
+      addProbRow("E", "0.2");
+      addProbRow("R", "0.4");
+
+      encodeSteps = [];
+      decodeSteps = [];
+      if (encodeTable) encodeTable.destroy();
+      if (decodeTable) decodeTable.destroy();
+      document.getElementById("encoding-table").innerHTML =
+        '<p class="small-help mb-0">Click <span class="fw-semibold">Encode Message</span> to compute steps for ARBER.</p>';
+      document.getElementById("decoding-table").innerHTML =
+        '<p class="small-help mb-0">Click <span class="fw-semibold">Decode from Tag</span> after encoding, or provide your own tag.</p>';
+
+      document.getElementById("interval-diagram").innerHTML =
+        '<p class="small-help p-2 mb-0">Run encoding or decoding to see the multi-stage vertical intervals here.</p>';
+
+      document.getElementById("decode-tag").value = "";
+      document.getElementById("decode-length").value = "";
+
+      document.getElementById("current-step-label").textContent = "–";
+      currentMode = "encode";
+      updateDiagramModeLabel();
+      currentStepIndex = 0;
+      lastEncoded = null;
+      lastDecoded = null;
+      renderSummary();
+    }
+
+    // ===========================
+    // Event Wiring
+    // ===========================
+    document.addEventListener("DOMContentLoaded", () => {
+      // Buttons
+      document
+        .getElementById("btn-add-row")
+        .addEventListener("click", () => addProbRow());
+      document
+        .getElementById("btn-autofill")
+        .addEventListener("click", autofillFromMessage);
+      document
+        .getElementById("btn-encode")
+        .addEventListener("click", encodeMessage);
+      document
+        .getElementById("btn-decode")
+        .addEventListener("click", decodeFromTag);
+      document
+        .getElementById("btn-reset")
+        .addEventListener("click", resetToExample);
+
+      document
+        .getElementById("btn-prev-step")
+        .addEventListener("click", () => goToStep(currentStepIndex - 1));
+      document
+        .getElementById("btn-next-step")
+        .addEventListener("click", () => goToStep(currentStepIndex + 1));
+      document
+        .getElementById("btn-play")
+        .addEventListener("click", playAnimation);
+      document
+        .getElementById("btn-pause")
+        .addEventListener("click", stopAnimation);
+
+      document
+        .getElementById("btn-view-encode")
+        .addEventListener("click", () => {
+          currentMode = "encode";
+          updateDiagramModeLabel();
+          goToStep(0);
+        });
+      document
+        .getElementById("btn-view-decode")
+        .addEventListener("click", () => {
+          currentMode = "decode";
+          updateDiagramModeLabel();
+          goToStep(0);
+        });
+
+      // Default example on load
+      resetToExample();
+    });
+  </script>
+</body>
+</html>

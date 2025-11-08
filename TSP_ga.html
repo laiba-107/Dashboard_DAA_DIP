@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Genetic Algorithm — TSP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #020617;
+      --border: #1e293b;
+      --accent: #38bdf8;
+      --accent2: #a855f7;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --good: #22c55e;
+      --danger: #f97373;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,sans-serif;
+      background: radial-gradient(circle at top,#0b1120 0,#020617 50%,#020617 100%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+    }
+    .shell {
+      max-width: 1200px;
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid rgba(148,163,184,0.4);
+      background: linear-gradient(145deg,rgba(15,23,42,0.97),rgba(2,6,23,0.97));
+      box-shadow: 0 24px 60px rgba(15,23,42,0.8);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    header {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(51,65,85,0.9);
+      background: radial-gradient(circle at top left,rgba(56,189,248,0.15),transparent 55%);
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .badge {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(56,189,248,0.7);
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    header p {
+      margin: 2px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 360px) minmax(0, 1.4fr);
+      min-height: 520px;
+    }
+    @media (max-width: 960px) {
+      main { grid-template-columns: minmax(0,1fr); }
+    }
+    .panel { padding: 10px 12px; }
+    .left {
+      border-right: 1px solid rgba(30,41,59,0.9);
+      background:
+        radial-gradient(circle at top left,rgba(56,189,248,0.06),transparent 60%),
+        radial-gradient(circle at bottom right,rgba(168,85,247,0.08),transparent 60%);
+    }
+    @media (max-width: 960px) {
+      .left { border-right: none; border-bottom: 1px solid rgba(30,41,59,0.9); }
+    }
+    .right {
+      background: radial-gradient(circle at center,rgba(15,23,42,0.95),#020617 80%);
+    }
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: linear-gradient(135deg,var(--accent),var(--accent2));
+      box-shadow: 0 0 10px rgba(56,189,248,0.9);
+    }
+    .card {
+      border-radius: 10px;
+      border: 1px solid rgba(51,65,85,0.9);
+      background: rgba(15,23,42,0.98);
+      padding: 8px 9px 10px;
+      margin-bottom: 8px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .card-title small {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 400;
+    }
+    .card-tag {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.5);
+      color: var(--muted);
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-bottom: 6px;
+    }
+    .field label {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .hint {
+      font-size: 10px;
+      color: #64748b;
+    }
+    input[type="number"], textarea, select {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid rgba(51,65,85,0.9);
+      background: rgba(15,23,42,0.98);
+      color: var(--text);
+      font-size: 12px;
+      padding: 5px 7px;
+      outline: none;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 70px;
+      max-height: 120px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,"Courier New",monospace;
+      font-size: 11px;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: rgba(56,189,248,0.9);
+      box-shadow: 0 0 0 1px rgba(56,189,248,0.4);
+      background: #020617;
+    }
+    .inline-row { display: flex; gap: 8px; }
+    .inline-row .field { flex: 1; }
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    button {
+      border-radius: 999px;
+      border: none;
+      padding: 6px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 500;
+    }
+    button.primary {
+      background: radial-gradient(circle at top left,var(--accent),var(--accent2));
+      color: #020617;
+      box-shadow: 0 10px 24px rgba(56,189,248,0.5);
+    }
+    button.secondary {
+      background: rgba(15,23,42,0.98);
+      color: var(--muted);
+      border: 1px solid rgba(51,65,85,0.9);
+    }
+    button[disabled] { opacity: .5; cursor: default; box-shadow: none; }
+    .status-chip {
+      margin-top: 5px;
+      font-size: 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px dashed rgba(148,163,184,0.8);
+      background: rgba(15,23,42,0.96);
+      color: var(--muted);
+    }
+    .status-dot {
+      width: 7px; height: 7px; border-radius: 999px;
+      background: #6b7280;
+    }
+    .status-dot.running {
+      background: var(--good);
+      box-shadow: 0 0 8px rgba(34,197,94,0.9);
+    }
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(3,minmax(0,1fr));
+      gap: 6px;
+      margin-top: 5px;
+      font-size: 11px;
+    }
+    .metric-pill {
+      border-radius: 8px;
+      border: 1px solid rgba(51,65,85,0.9);
+      background: rgba(15,23,42,0.98);
+      padding: 4px 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .metric-label { color: var(--muted); }
+    .metric-value { font-weight: 600; color: var(--accent); }
+    .error-text {
+      font-size: 11px;
+      color: var(--danger);
+      margin-top: 3px;
+    }
+    .visual-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      height: 100%;
+    }
+    .flex-2col {
+      display: grid;
+      grid-template-columns: minmax(0,1.2fr) minmax(0,1fr);
+      gap: 8px;
+      height: 100%;
+    }
+    @media (max-width: 960px) {
+      .flex-2col { grid-template-columns: minmax(0,1fr); }
+    }
+    .canvas-card {
+      border-radius: 12px;
+      border: 1px solid rgba(51,65,85,0.95);
+      background:
+        radial-gradient(circle at top left,rgba(30,64,175,0.6),transparent 55%),
+        radial-gradient(circle at bottom right,rgba(14,116,144,0.6),transparent 60%),
+        #020617;
+      padding: 8px 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .canvas-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 11px;
+      color: rgba(226,232,240,0.9);
+      flex-wrap: wrap;
+    }
+    .canvas-label {
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      font-size: 10px;
+      color: rgba(148,163,184,0.9);
+    }
+    #tspCanvas {
+      width: 100%;
+      height: 360px;
+      border-radius: 9px;
+      border: 1px solid rgba(15,23,42,0.95);
+      background: radial-gradient(circle at top,#020617,#020617 60%,#020617 100%);
+      display: block;
+    }
+    .sub-card {
+      border-radius: 10px;
+      border: 1px solid rgba(51,65,85,0.95);
+      background: rgba(15,23,42,0.98);
+      padding: 6px 7px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .sub-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--muted);
+      flex-wrap: wrap;
+    }
+    .two-tables {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+      gap: 6px;
+    }
+    @media (max-width: 960px) {
+      .two-tables { grid-template-columns: minmax(0,1fr); }
+    }
+    .tbl-wrap {
+      border-radius: 8px;
+      border: 1px solid rgba(30,64,175,0.7);
+      background: rgba(15,23,42,1);
+      max-height: 160px;
+      overflow: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10.5px;
+    }
+    thead {
+      position: sticky;
+      top: 0;
+      background: rgba(15,23,42,1);
+      z-index: 1;
+    }
+    th, td {
+      padding: 4px 6px;
+      border-bottom: 1px solid rgba(30,64,175,0.4);
+      text-align: left;
+      white-space: nowrap;
+    }
+    th {
+      color: var(--muted);
+      font-weight: 500;
+    }
+    tbody tr:nth-child(even) {
+      background: rgba(15,23,42,0.96);
+    }
+    .log-card {
+      border-radius: 10px;
+      border: 1px solid rgba(51,65,85,0.95);
+      background: radial-gradient(circle at bottom right,rgba(30,64,175,0.3),transparent 60%),rgba(2,6,23,0.98);
+      padding: 6px 7px 8px;
+      font-size: 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 130px;
+    }
+    .log-body {
+      margin-top: 3px;
+      border-top: 1px dashed rgba(51,65,85,0.9);
+      padding-top: 3px;
+      max-height: 95px;
+      overflow-y: auto;
+    }
+    .log-line {
+      font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Courier New",monospace;
+      font-size: 10.5px;
+      color: rgba(209,213,219,0.98);
+      padding: 1px 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .g { color: var(--accent); }
+    .d { color: #fbbf24; }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div>
+      <h1>
+        Genetic Algorithm — TSP
+        <span class="badge">Interactive</span>
+      </h1>
+      <p>Define cities, initial population, and fitness (auto or manual). Watch GA evolve the tour and see roulette-wheel calculations.</p>
+    </div>
+  </header>
+
+  <main>
+    <!-- LEFT: CONTROLS -->
+    <section class="panel left">
+      <div class="section-title">TSP Setup</div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Cities <small>Genes = visit order</small></div>
+          <div class="card-tag">Problem input</div>
+        </div>
+        <div class="field">
+          <label>City coordinates <span class="hint">Each line: x y or x,y (≥3). Leave blank to use random.</span></label>
+          <textarea id="tspCityCoords" placeholder="Example:
+10 20
+30 80
+90,10
+75 60
+40 30"></textarea>
+        </div>
+        <div class="inline-row">
+          <div class="field">
+            <label>Random cities <span class="hint">Used if coords are empty</span></label>
+            <input id="tspNumRandom" type="number" min="3" max="80" value="10">
+          </div>
+          <div class="field">
+            <label>Random seed <span class="hint">optional</span></label>
+            <input id="tspSeed" type="number">
+          </div>
+        </div>
+        <div class="button-row">
+          <button type="button" class="secondary" id="tspPreviewCitiesBtn">Preview cities</button>
+          <button type="button" class="secondary" id="tspClearBtn">Clear</button>
+        </div>
+        <div id="tspCityError" class="error-text" style="display:none;"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">GA Parameters & Fitness</div>
+          <div class="card-tag">Genetic algorithm</div>
+        </div>
+
+        <div class="field">
+          <label>Population size <span class="hint">Auto mode uses this. Manual: uses #chromosomes you give.</span></label>
+          <input id="tspPopSize" type="number" min="2" max="500" value="60">
+        </div>
+
+        <div class="field">
+          <label>Initial chromosomes (optional)
+            <span class="hint">Each line: permutation of indices, e.g. "0 2 1 3".</span>
+          </label>
+          <textarea id="tspInitialPop" placeholder="Example for 5 cities:
+0 1 2 3 4
+4 3 2 1 0
+0 2 4 1 3"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Fitness mode
+            <span class="hint">Automatic = (1/distance)^k. Manual = your fitness for gen 0.</span>
+          </label>
+          <select id="tspFitnessMode">
+            <option value="auto">Automatic: fitness = (1 / distance)^k</option>
+            <option value="manual">Manual: use my fitness for generation 0</option>
+          </select>
+        </div>
+
+        <div class="field" id="tspAutoExpField">
+          <label>k in (1 / distance)^k <span class="hint">k=1 → x, k=2 → x², k=3 → x³</span></label>
+          <input id="tspAutoExp" type="number" min="0.1" step="0.1" value="1">
+        </div>
+
+        <div class="field" id="tspManualFitField" style="display:none;">
+          <label>Manual fitness values (generation 0)
+            <span class="hint">One positive value per chromosome line.</span>
+          </label>
+          <textarea id="tspManualFit" placeholder="Example for 3 chromosomes:
+10
+5
+3.5"></textarea>
+        </div>
+
+        <div class="inline-row">
+          <div class="field">
+            <label>Generations</label>
+            <input id="tspGenerations" type="number" min="10" max="5000" value="300">
+          </div>
+          <div class="field">
+            <label>Crossover rate</label>
+            <input id="tspCrossover" type="number" min="0" max="1" step="0.05" value="0.9">
+          </div>
+        </div>
+        <div class="inline-row">
+          <div class="field">
+            <label>Mutation rate</label>
+            <input id="tspMutation" type="number" min="0" max="1" step="0.01" value="0.02">
+          </div>
+          <div class="field">
+            <label>Elites</label>
+            <input id="tspElites" type="number" min="0" max="10" value="1">
+          </div>
+        </div>
+
+        <div class="button-row">
+          <button type="button" class="primary" id="tspRunBtn">Run GA (TSP)</button>
+          <button type="button" class="secondary" id="tspStopBtn" disabled>Stop</button>
+        </div>
+
+        <div class="status-chip">
+          <span class="status-dot" id="tspStatusDot"></span>
+          <span id="tspStatusText">Idle — define cities & GA parameters, then run.</span>
+        </div>
+
+        <div class="metrics-row">
+          <div class="metric-pill">
+            <span class="metric-label">Generation</span>
+            <span class="metric-value" id="tspMetricGen">–</span>
+          </div>
+          <div class="metric-pill">
+            <span class="metric-label">Best distance</span>
+            <span class="metric-value" id="tspMetricBest">–</span>
+          </div>
+          <div class="metric-pill">
+            <span class="metric-label">Cities</span>
+            <span class="metric-value" id="tspMetricCities">–</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: VISUALIZATION & TABLES -->
+    <section class="panel right">
+      <div class="visual-wrapper">
+        <div class="flex-2col">
+          <div class="canvas-card">
+            <div class="canvas-header">
+              <span class="canvas-label">TSP path</span>
+              <span>Blue nodes = cities · Line = best tour (shortest distance so far)</span>
+            </div>
+            <canvas id="tspCanvas" width="760" height="360"></canvas>
+            <div class="log-card">
+              <div class="sub-header">
+                <span>Evolution log</span>
+                <span style="font-size:10px;">Best distance (sampled over generations)</span>
+              </div>
+              <div class="log-body" id="tspLog"></div>
+            </div>
+          </div>
+          <div class="sub-card">
+            <div class="sub-header">
+              <span>GA Tables</span>
+              <span style="font-size:10px;">Population &amp; Roulette-wheel selection</span>
+            </div>
+            <div class="two-tables">
+              <div>
+                <div style="font-size:10px;color:var(--muted);margin-bottom:2px;">Population (current generation)</div>
+                <div class="tbl-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>#</th><th>Chromosome (tour)</th><th>Distance</th><th>Fitness</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tspPopTableBody"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:10px;color:var(--muted);margin-bottom:2px;">Roulette-wheel</div>
+                <div class="tbl-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>#</th><th>Fᵢ</th><th>Pᵢ</th><th>Cᵢ</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tspRouletteTableBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function() {
+  /* ---------- Utility ---------- */
+  function buildRouletteTable(fitness) {
+    const total = fitness.reduce((a,b)=>a+b,0);
+    let cum = 0;
+    if (!isFinite(total) || total <= 0) {
+      const n = fitness.length || 1;
+      const p = 1/n;
+      return fitness.map((f,i)=>{
+        cum += p;
+        return { index:i+1, fitness:f||0, prob:p, cum:cum };
+      });
+    }
+    return fitness.map((f,i)=>{
+      const p = f/total;
+      cum += p;
+      return { index:i+1, fitness:f, prob:p, cum:cum };
+    });
+  }
+
+  function rouletteSelect(pop, fitness) {
+    const total = fitness.reduce((a,b)=>a+b,0);
+    if (!isFinite(total) || total <= 0) {
+      return pop[Math.floor(Math.random()*pop.length)];
+    }
+    const r = Math.random()*total;
+    let acc = 0;
+    for (let i=0;i<pop.length;i++) {
+      acc += fitness[i];
+      if (r <= acc) return pop[i];
+    }
+    return pop[pop.length-1];
+  }
+
+  // distance on RAW coordinates (not canvas coordinates)
+  function tourDistance(citiesRaw, chrom) {
+    let d = 0;
+    for (let i=0;i<chrom.length;i++) {
+      const a = citiesRaw[chrom[i]];
+      const b = citiesRaw[(i+1)%chrom.length];
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      d += Math.sqrt(dx*dx + dy*dy);
+    }
+    return d;
+  }
+
+  function randomPermChrom(n) {
+    const base = [...Array(n).keys()];
+    for (let j = base.length - 1; j > 0; j--) {
+      const k = Math.floor(Math.random() * (j + 1));
+      [base[j], base[k]] = [base[k], base[j]];
+    }
+    return base;
+  }
+
+  function randomPermPopulation(popSize, n) {
+    const pop=[];
+    for (let i=0;i<popSize;i++) {
+      pop.push(randomPermChrom(n));
+    }
+    return pop;
+  }
+
+  function orderCrossover(p1,p2) {
+    const size=p1.length;
+    const child=new Array(size).fill(null);
+    const start=Math.floor(Math.random()*size);
+    const end=start+Math.floor(Math.random()*(size-start));
+    for (let i=start;i<=end;i++) child[i]=p1[i];
+    let idx2=0;
+    for (let i=0;i<size;i++) {
+      if (child[i]==null) {
+        while (child.includes(p2[idx2])) idx2++;
+        child[i]=p2[idx2++];
+      }
+    }
+    return child;
+  }
+
+  function mutatePermutation(chrom, rate) {
+    for (let i=0;i<chrom.length;i++) {
+      if (Math.random()<rate) {
+        const j=Math.floor(Math.random()*chrom.length);
+        [chrom[i],chrom[j]]=[chrom[j],chrom[i]];
+      }
+    }
+  }
+
+  // NEW: check if chromosome is a valid permutation of 0..nCities-1
+  function isValidChromosome(chrom, nCities) {
+    if (!Array.isArray(chrom)) return false;
+    if (chrom.length !== nCities) return false;
+    const seen = new Array(nCities).fill(false);
+    for (let i=0;i<chrom.length;i++) {
+      const gene = chrom[i];
+      if (!Number.isInteger(gene) || gene < 0 || gene >= nCities) return false;
+      if (seen[gene]) return false; // duplicate
+      seen[gene] = true;
+    }
+    return true;
+  }
+
+  /* ---------- DOM refs ---------- */
+  const tspCanvas = document.getElementById("tspCanvas");
+  const tspCtx = tspCanvas.getContext("2d");
+
+  const tspCityCoords = document.getElementById("tspCityCoords");
+  const tspNumRandom = document.getElementById("tspNumRandom");
+  const tspSeed = document.getElementById("tspSeed");
+  const tspPreviewCitiesBtn = document.getElementById("tspPreviewCitiesBtn");
+  const tspClearBtn = document.getElementById("tspClearBtn");
+  const tspCityError = document.getElementById("tspCityError");
+
+  const tspPopSize = document.getElementById("tspPopSize");
+  const tspInitialPop = document.getElementById("tspInitialPop");
+  const tspFitnessMode = document.getElementById("tspFitnessMode");
+  const tspAutoExpField = document.getElementById("tspAutoExpField");
+  const tspAutoExp = document.getElementById("tspAutoExp");
+  const tspManualFitField = document.getElementById("tspManualFitField");
+  const tspManualFit = document.getElementById("tspManualFit");
+
+  const tspGenerations = document.getElementById("tspGenerations");
+  const tspCrossover = document.getElementById("tspCrossover");
+  const tspMutation = document.getElementById("tspMutation");
+  const tspElites = document.getElementById("tspElites");
+  const tspRunBtn = document.getElementById("tspRunBtn");
+  const tspStopBtn = document.getElementById("tspStopBtn");
+  const tspStatusDot = document.getElementById("tspStatusDot");
+  const tspStatusText = document.getElementById("tspStatusText");
+  const tspMetricGen = document.getElementById("tspMetricGen");
+  const tspMetricBest = document.getElementById("tspMetricBest");
+  const tspMetricCities = document.getElementById("tspMetricCities");
+  const tspLog = document.getElementById("tspLog");
+  const tspPopTableBody = document.getElementById("tspPopTableBody");
+  const tspRouletteTableBody = document.getElementById("tspRouletteTableBody");
+
+  const tspState = {
+    citiesRaw: [],   // original coordinates, used for distance
+    bestChrom: null,
+    bestDist: Infinity,
+    population: [],
+    fitness: [],
+    gen: 0,
+    maxGen: 0,
+    running: false,
+    timer: null,
+    manualFitness: [],
+    useManualGen0: false,
+    logEvery: 10,
+    nonDegenerate: true
+  };
+
+  function setStatus(running,text) {
+    tspState.running = running;
+    tspStatusText.textContent = text;
+    if (running) {
+      tspStatusDot.classList.add("running");
+      tspRunBtn.disabled = true;
+      tspStopBtn.disabled = false;
+    } else {
+      tspStatusDot.classList.remove("running");
+      tspRunBtn.disabled = false;
+      tspStopBtn.disabled = true;
+    }
+  }
+
+  function resetMetrics() {
+    tspMetricGen.textContent = "–";
+    tspMetricBest.textContent = "–";
+    tspMetricCities.textContent = tspState.citiesRaw.length || "–";
+  }
+
+  function updateMetrics() {
+    tspMetricGen.textContent = tspState.gen;
+    tspMetricBest.textContent =
+      tspState.bestDist===Infinity ? "–" : tspState.bestDist.toFixed(2);
+    tspMetricCities.textContent = tspState.citiesRaw.length;
+  }
+
+  function clearCanvas() {
+    tspCtx.clearRect(0,0,tspCanvas.width,tspCanvas.height);
+    tspCtx.fillStyle = "#020617";
+    tspCtx.fillRect(0,0,tspCanvas.width,tspCanvas.height);
+  }
+
+  // map raw coords to canvas for drawing only
+  function getScaledCities() {
+    const raw = tspState.citiesRaw;
+    if (!raw.length) return [];
+    const pad = 40;
+    const w = tspCanvas.width - 2*pad;
+    const h = tspCanvas.height - 2*pad;
+    let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+    raw.forEach(p=>{
+      if (p.x<minX) minX=p.x;
+      if (p.x>maxX) maxX=p.x;
+      if (p.y<minY) minY=p.y;
+      if (p.y>maxY) maxY=p.y;
+    });
+    let spanX=maxX-minX, spanY=maxY-minY;
+    if (spanX===0) spanX=1;
+    if (spanY===0) spanY=1;
+    const sx = w/spanX, sy=h/spanY;
+    return raw.map(p=>({
+      x: pad + (p.x-minX)*sx,
+      y: pad + (p.y-minY)*sy
+    }));
+  }
+
+  function draw() {
+    clearCanvas();
+    if (!tspState.citiesRaw.length) return;
+    const cities = getScaledCities();
+    if (!cities.length) return;
+
+    // best path
+    if (tspState.bestChrom && tspState.bestChrom.length===cities.length) {
+      tspCtx.save();
+      tspCtx.lineWidth = 2;
+      tspCtx.strokeStyle = "#38bdf8";
+      tspCtx.shadowColor = "rgba(56,189,248,0.9)";
+      tspCtx.shadowBlur = 12;
+      tspCtx.beginPath();
+      const first = tspState.bestChrom[0];
+      tspCtx.moveTo(cities[first].x, cities[first].y);
+      for (let i=1;i<tspState.bestChrom.length;i++) {
+        const idx = tspState.bestChrom[i];
+        tspCtx.lineTo(cities[idx].x, cities[idx].y);
+      }
+      tspCtx.lineTo(cities[first].x, cities[first].y);
+      tspCtx.stroke();
+      tspCtx.restore();
+    }
+
+    // cities
+    tspCtx.save();
+    for (let i=0;i<cities.length;i++) {
+      const c = cities[i];
+      tspCtx.beginPath();
+      tspCtx.arc(c.x,c.y,7,0,Math.PI*2);
+      tspCtx.fillStyle = "rgba(15,23,42,0.95)";
+      tspCtx.fill();
+
+      tspCtx.beginPath();
+      tspCtx.arc(c.x,c.y,4,0,Math.PI*2);
+      tspCtx.fillStyle = "#38bdf8";
+      tspCtx.shadowColor = "rgba(56,189,248,0.9)";
+      tspCtx.shadowBlur = 10;
+      tspCtx.fill();
+      tspCtx.shadowBlur = 0;
+
+      tspCtx.fillStyle = "#e5e7eb";
+      tspCtx.font = "10px system-ui";
+      tspCtx.textAlign = "center";
+      tspCtx.textBaseline = "top";
+      tspCtx.fillText(String(i), c.x, c.y+7);
+    }
+    tspCtx.restore();
+  }
+
+  function appendLog(msg) {
+    const div = document.createElement("div");
+    div.className = "log-line";
+    div.innerHTML = msg;
+    tspLog.appendChild(div);
+    tspLog.scrollTop = tspLog.scrollHeight;
+  }
+
+  function clearLog() { tspLog.innerHTML = ""; }
+
+  function parseCities() {
+    tspCityError.style.display = "none";
+    tspCityError.textContent = "";
+    const txt = tspCityCoords.value.trim();
+    const raw = [];
+
+    if (txt) {
+      const lines = txt.split("\n").map(l=>l.trim()).filter(Boolean);
+      if (lines.length < 3) throw new Error("At least 3 cities are required.");
+      for (const line of lines) {
+        const parts = line.split(/[,\s]+/).filter(Boolean);
+        if (parts.length < 2) continue;
+        const x = parseFloat(parts[0]), y = parseFloat(parts[1]);
+        if (isNaN(x) || isNaN(y)) {
+          throw new Error('Invalid coordinate: "' + line + '"');
+        }
+        raw.push({x,y});
+      }
+      if (raw.length < 3) {
+        throw new Error("At least 3 valid cities are required.");
+      }
+    } else {
+      const n = parseInt(tspNumRandom.value,10);
+      if (!n || n < 3) throw new Error("Random cities: n must be ≥3.");
+      let seedStr = tspSeed.value.trim();
+      let rngSeed = seedStr ? (Number(seedStr)>>>0) : null;
+      function rng() {
+        if (rngSeed == null) return Math.random();
+        rngSeed = (rngSeed*1664525+1013904223)>>>0;
+        return rngSeed/4294967296;
+      }
+      // random in [0,100] for both x and y
+      for (let i=0;i<n;i++) {
+        raw.push({x: rng()*100, y: rng()*100});
+      }
+    }
+
+    const uniq = new Set(raw.map(p=>`${p.x},${p.y}`));
+    if (uniq.size < 2) {
+      tspState.nonDegenerate = false;
+      throw new Error("All cities are at the same coordinate — tour distance would be 0. Use varied coordinates.");
+    } else {
+      tspState.nonDegenerate = true;
+    }
+
+    return raw;
+  }
+
+  function prepareCities(previewOnly) {
+    try {
+      const citiesRaw = parseCities();
+      tspState.citiesRaw = citiesRaw;
+      tspState.population = [];
+      tspState.fitness = [];
+      tspState.bestChrom = null;
+      tspState.bestDist = Infinity;
+      tspState.gen = 0;
+      resetMetrics();
+      if (!previewOnly) tspMetricCities.textContent = citiesRaw.length;
+      draw();
+      return true;
+    } catch (err) {
+      tspCityError.textContent = err.message;
+      tspCityError.style.display = "block";
+      return false;
+    }
+  }
+
+  function updateTables(pop, distances, fitness) {
+    tspPopTableBody.innerHTML = "";
+    tspRouletteTableBody.innerHTML = "";
+    if (!pop || !pop.length) return;
+    const maxRows = Math.min(pop.length,12);
+
+    for (let i=0;i<maxRows;i++) {
+      const tr=document.createElement("tr");
+      tr.innerHTML =
+        "<td>"+(i+1)+"</td>"+
+        "<td>"+pop[i].join("→")+"</td>"+
+        "<td>"+distances[i].toFixed(2)+"</td>"+
+        "<td>"+fitness[i].toExponential(2)+"</td>";
+      tspPopTableBody.appendChild(tr);
+    }
+    const rows = buildRouletteTable(fitness);
+    for (let i=0;i<Math.min(rows.length,12);i++) {
+      const r=rows[i];
+      const tr=document.createElement("tr");
+      tr.innerHTML =
+        "<td>"+r.index+"</td>"+
+        "<td>"+r.fitness.toExponential(2)+"</td>"+
+        "<td>"+r.prob.toFixed(3)+"</td>"+
+        "<td>"+Math.min(r.cum,1).toFixed(3)+"</td>";
+      tspRouletteTableBody.appendChild(tr);
+    }
+  }
+
+  function step() {
+    const citiesRaw = tspState.citiesRaw;
+    const pop = tspState.population;
+    if (!citiesRaw.length || !pop.length) return;
+
+    const nCities = citiesRaw.length;
+    const popSize = pop.length;
+    const mutRate = parseFloat(tspMutation.value) || 0.02;
+    const crossRate = parseFloat(tspCrossover.value) || 0.9;
+    const elites = Math.max(0,Math.min(popSize-1,parseInt(tspElites.value,10)||0));
+    const exp = parseFloat(tspAutoExp.value) || 1;
+
+    const distances=[], fitness=[];
+    let bestD=Infinity, bestChrom=null;
+
+    // validate / repair chromosomes before evaluating
+    for (let i=0;i<pop.length;i++) {
+      if (!isValidChromosome(pop[i], nCities)) {
+        console.warn("Invalid chromosome detected; repairing", pop[i]);
+        pop[i] = randomPermChrom(nCities);
+      }
+      const chrom = pop[i];
+      let d = tourDistance(citiesRaw, chrom);
+
+      // if cities are non-degenerate, distance 0 should not happen
+      if (tspState.nonDegenerate && d === 0) {
+        console.warn("Zero distance detected with non-degenerate cities; treating as huge distance. Chromosome:", chrom);
+        d = 1e9; // effectively worst possible
+      }
+
+      distances.push(d);
+
+      let fit = Math.pow(1/(d+1e-9), exp);
+      if (!isFinite(fit) || fit <= 0) fit = 1e-9;
+
+      if (tspState.gen===0 && tspState.useManualGen0 &&
+          tspState.manualFitness && tspState.manualFitness.length===pop.length) {
+        fit = Math.max(1e-9, tspState.manualFitness[i]);
+      }
+      fitness.push(fit);
+
+      if (d < bestD) {
+        bestD = d;
+        bestChrom = chrom;
+      }
+    }
+
+    if (bestChrom && bestD < tspState.bestDist) {
+      tspState.bestDist = bestD;
+      tspState.bestChrom = bestChrom.slice();
+    }
+
+    tspState.fitness = fitness;
+
+    updateTables(pop, distances, fitness);
+    draw();
+    updateMetrics();
+
+    if (tspState.gen % tspState.logEvery === 0 || tspState.gen === 0) {
+      appendLog('<span class="g">Gen '+tspState.gen+
+                '</span> · <span class="d">best distance ≈ '+
+                tspState.bestDist.toFixed(2)+'</span>');
+    }
+
+    const newPop=[];
+    if (elites>0) {
+      const idxs=pop.map((_,i)=>i);
+      idxs.sort((a,b)=>distances[a]-distances[b]);
+      for (let i=0;i<elites;i++) newPop.push(pop[idxs[i]].slice());
+    }
+    while (newPop.length<popSize) {
+      const p1=rouletteSelect(pop,fitness);
+      const p2=rouletteSelect(pop,fitness);
+      let child;
+      if (Math.random()<crossRate) child=orderCrossover(p1,p2);
+      else child=p1.slice();
+      mutatePermutation(child, mutRate);
+      newPop.push(child);
+    }
+    tspState.population = newPop;
+    tspState.gen++;
+  }
+
+  function startGA() {
+    if (!prepareCities(false)) return;
+
+    const maxGen=parseInt(tspGenerations.value,10);
+    if (!maxGen || maxGen<1) { alert("Generations must be ≥1."); return; }
+    tspState.maxGen = maxGen;
+    tspState.gen = 0;
+    tspState.bestChrom = null;
+    tspState.bestDist = Infinity;
+    clearLog();
+    updateMetrics();
+
+    const nCities = tspState.citiesRaw.length;
+    const mode = tspFitnessMode.value;
+    const manualText = tspInitialPop.value.trim();
+    const initial=[];
+    if (manualText) {
+      const lines = manualText.split("\n").map(l=>l.trim()).filter(Boolean);
+      lines.forEach(line=>{
+        const parts=line.split(/\s+/).filter(Boolean);
+        if (parts.length!==nCities) return;
+        const chrom = parts.map(x=>parseInt(x,10));
+        if (!isValidChromosome(chrom, nCities)) return;
+        initial.push(chrom);
+      });
+    }
+
+    if (mode==="manual") {
+      if (initial.length<2) {
+        alert("Manual fitness: provide at least 2 valid chromosomes.");
+        return;
+      }
+      const fitText = tspManualFit.value.trim();
+      if (!fitText) {
+        alert("Manual fitness: enter one fitness value per chromosome line.");
+        return;
+      }
+      const fLines=fitText.split("\n").map(l=>l.trim()).filter(Boolean);
+      if (fLines.length!==initial.length) {
+        alert("Manual fitness: #fitness values must match #chromosomes.");
+        return;
+      }
+      const manualFitness=[];
+      for (const line of fLines) {
+        const v=parseFloat(line);
+        if (isNaN(v)||v<=0) {
+          alert("Manual fitness: all values must be positive.");
+          return;
+        }
+        manualFitness.push(v);
+      }
+      tspState.population = initial;
+      tspState.manualFitness = manualFitness;
+      tspState.useManualGen0 = true;
+    } else {
+      const popSize=parseInt(tspPopSize.value,10);
+      if (!popSize || popSize<2) { alert("Population size must be ≥2."); return; }
+      const needed=Math.max(0,popSize-initial.length);
+      const randomPop = randomPermPopulation(needed,nCities);
+      tspState.population = initial.concat(randomPop);
+      tspState.manualFitness = [];
+      tspState.useManualGen0 = false;
+    }
+
+    if (!tspState.population.length) {
+      alert("Population is empty — check your parameters.");
+      return;
+    }
+
+    setStatus(true,"Running GA for TSP…");
+    if (tspState.timer) clearInterval(tspState.timer);
+    tspState.timer = setInterval(function() {
+      if (!tspState.running) return;
+      if (tspState.gen>=tspState.maxGen) {
+        clearInterval(tspState.timer);
+        tspState.timer=null;
+        setStatus(false,"Finished — TSP GA stopped at generation "+tspState.gen);
+        return;
+      }
+      step();
+    },40);
+  }
+
+  function stopGA() {
+    if (tspState.timer) {
+      clearInterval(tspState.timer);
+      tspState.timer=null;
+    }
+    setStatus(false,"Stopped — TSP GA halted.");
+  }
+
+  tspPreviewCitiesBtn.addEventListener("click", function(){
+    stopGA();
+    prepareCities(true);
+    setStatus(false,"Cities previewed — now set GA parameters and run.");
+  });
+  tspClearBtn.addEventListener("click", function(){
+    stopGA();
+    tspState.citiesRaw=[];
+    tspState.population=[];
+    tspState.fitness=[];
+    tspState.bestChrom=null;
+    tspState.bestDist=Infinity;
+    tspState.gen=0;
+    clearCanvas();
+    clearLog();
+    resetMetrics();
+    tspPopTableBody.innerHTML="";
+    tspRouletteTableBody.innerHTML="";
+    setStatus(false,"Cleared — enter new cities.");
+  });
+  tspRunBtn.addEventListener("click", function(){ stopGA(); startGA(); });
+  tspStopBtn.addEventListener("click", stopGA);
+
+  tspFitnessMode.addEventListener("change", function(){
+    const mode=tspFitnessMode.value;
+    tspManualFitField.style.display = (mode==="manual")?"block":"none";
+    tspAutoExpField.style.display = (mode==="auto")?"block":"none";
+  });
+
+  clearCanvas();
+  setStatus(false,"Idle — define cities & GA parameters, then run.");
+})();
+</script>
+</body>
+</html>

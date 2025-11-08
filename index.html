@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Algorithms Lab — Dashboard</title>
+<style>
+  :root{
+    --bg:#0b1220;
+    --panel:#0f172a;
+    --panel-2:#0c1526;
+    --border:#1f2a44;
+    --text:#e5e7eb;
+    --muted:#9aa3b2;
+    --accent:#38bdf8;
+    --accent-2:#60a5fa;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",Arial;
+  }
+  header{
+    padding:14px 22px;
+    border-bottom:1px solid var(--border);
+    background:#09101d;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  header h1{margin:0;font-size:1.2rem;letter-spacing:.02em}
+  header small{color:var(--muted)}
+
+  /* Top main tabs */
+  .main-tabs{
+    display:flex;
+    gap:8px;
+    border-bottom:1px solid var(--border);
+    background:#0d1628;
+    padding:6px 10px;
+  }
+  .main-tab{
+    appearance:none;
+    border:1px solid var(--border);
+    background:var(--panel);
+    color:var(--text);
+    padding:8px 12px;
+    border-radius:10px;
+    cursor:pointer;
+    font-size:.95rem;
+  }
+  .main-tab.active{
+    border-color:var(--accent);
+    box-shadow:0 0 0 1px var(--accent) inset;
+    background:linear-gradient(180deg,#0f1c35,#0a1324);
+  }
+  .tab-panel{display:none}
+  .tab-panel.active{display:block}
+
+  /* Layout */
+  .alg-layout{
+    display:grid;
+    grid-template-columns:260px 1fr;
+    gap:16px;
+    padding:16px;
+  }
+  @media(max-width:900px){
+    .alg-layout{grid-template-columns:1fr}
+  }
+  .sidebar{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:12px;
+  }
+  .sidebar h3{
+    margin:6px 6px 8px;
+    font-size:1rem;
+    color:#cdd4df;
+  }
+  .alg-list,
+  .filter-list{
+    list-style:none;
+    margin:0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .alg-item,
+  .filter-item{
+    padding:10px 12px;
+    border:1px solid var(--border);
+    border-radius:10px;
+    background:var(--panel-2);
+    color:var(--text);
+    cursor:pointer;
+    font-size:.92rem;
+  }
+  .alg-item:hover,
+  .filter-item:hover{
+    border-color:#334567;
+  }
+  .alg-item.active,
+  .filter-item.active{
+    border-color:var(--accent-2);
+    box-shadow:0 0 0 1px var(--accent-2) inset;
+    background:linear-gradient(180deg,#12203b,#0e1a2f);
+  }
+
+  .main-col{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:14px;
+  }
+  .card h2{margin:0 0 8px 0;font-size:1.05rem}
+  .muted{color:var(--muted)}
+  .small{font-size:.82rem}
+
+  .frame-wrap{
+    margin-top:8px;
+    border-radius:12px;
+    border:1px solid var(--border);
+    overflow:hidden;
+    background:#020617;
+  }
+  .frame-wrap iframe{
+    width:100%;
+    min-height:700px; /* adjust as you like */
+    border:none;
+    display:block;
+    background:#020617;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Algorithms Lab — Dashboard</h1>
+  <small>Navigate to your algorithm & filter pages</small>
+</header>
+
+<!-- Main top tabs -->
+<div class="main-tabs">
+  <button class="main-tab active" data-tab="algos">Algorithms</button>
+  <button class="main-tab" data-tab="filters">Filters</button>
+</div>
+
+<!-- ================= TAB: ALGORITHMS ================= -->
+<div id="tab-algos" class="tab-panel active">
+  <div class="alg-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h3>Algorithms</h3>
+      <ul class="alg-list" id="algList">
+        <!-- CHANGE data-src values to match your real file names -->
+        <li class="alg-item active" data-src="knapsack_dp.html">0/1 Knapsack Dynamic Programming</li>
+        <li class="alg-item" data-src="knapsack_ga.html">0/1 Knapsack (Greedy Algorithm)</li>
+        <li class="alg-item" data-src="fractional_knapsack.html">Fractional Knapsack</li>
+        <li class="alg-item" data-src="coin_change_dp.html">Coin Change Dynamic Programming</li>
+        <li class="alg-item" data-src="huffman_text.html">Huffman (Table Enc/Dec)</li>
+        <li class="alg-item" data-src="huffman_image.html">Huffman (Image/Table)</li>
+        <li class="alg-item" data-src="arithematic_encoding_and_decoding.html">arithmetic Encoding and Decoding</li>
+      </ul>
+    </aside>
+
+    <!-- Right side: iframe viewer -->
+    <div class="main-col">
+      <div class="card">
+        <h2 id="algoTitle">0/1 Knapsack (DP)</h2>
+        <p class="muted small">
+          This panel loads your existing algorithm HTML files inside the frame below.
+        </p>
+        <div class="frame-wrap">
+          <!-- default page to load -->
+          <iframe id="algoFrame" src="knapsack_dp.html" loading="lazy"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= TAB: FILTERS ================= -->
+<div id="tab-filters" class="tab-panel">
+  <div class="alg-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h3>DIP Filters</h3>
+      <ul class="filter-list" id="filterList">
+        <!-- CHANGE data-src values to match your real file names -->
+        <li class="filter-item active" data-src="spatial_filter.html">Spatial Filter</li>
+        <li class="filter-item" data-src="average.html">Average Filter</li>
+        <li class="filter-item" data-src="median.html">Median Filter</li>
+        <li class="filter-item" data-src="weighted_average_filter.html">Weighted Average Filter</li>
+        <li class="filter-item" data-src="laplician_enhencmnet.html">Laplacian Enhancement</li>
+      </ul>
+    </aside>
+
+    <!-- Right side: iframe viewer -->
+    <div class="main-col">
+      <div class="card">
+        <h2 id="filterTitle">Spatial Filter</h2>
+        <p class="muted small">
+          This panel loads your existing DIP filter HTML files inside the frame below.
+        </p>
+        <div class="frame-wrap">
+          <!-- default page to load -->
+          <iframe id="filterFrame" src="spatial_filter.html" loading="lazy"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- Top-level tabs (Algorithms / Filters) ---------- */
+const mainTabs = [...document.querySelectorAll('.main-tab')];
+const tabPanels = {
+  algos: document.getElementById('tab-algos'),
+  filters: document.getElementById('tab-filters')
+};
+
+mainTabs.forEach(btn => {
+  btn.addEventListener('click', () => {
+    mainTabs.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    Object.values(tabPanels).forEach(p => p.classList.remove('active'));
+    tabPanels[btn.dataset.tab].classList.add('active');
+  });
+});
+
+/* ---------- Algorithms sidebar navigation ---------- */
+const algoItems = [...document.querySelectorAll('.alg-item')];
+const algoFrame = document.getElementById('algoFrame');
+const algoTitle = document.getElementById('algoTitle');
+
+algoItems.forEach(item => {
+  item.addEventListener('click', () => {
+    algoItems.forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    const src = item.dataset.src;
+    if (src) algoFrame.src = src;
+    algoTitle.textContent = item.textContent.trim();
+  });
+});
+
+/* ---------- Filters sidebar navigation ---------- */
+const filterItems = [...document.querySelectorAll('.filter-item')];
+const filterFrame = document.getElementById('filterFrame');
+const filterTitle = document.getElementById('filterTitle');
+
+filterItems.forEach(item => {
+  item.addEventListener('click', () => {
+    filterItems.forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    const src = item.dataset.src;
+    if (src) filterFrame.src = src;
+    filterTitle.textContent = item.textContent.trim();
+  });
+});
+</script>
+</body>
+</html>

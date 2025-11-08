@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Genetic Algorithm — 0/1 Knapsack</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg:#020617;
+      --border:#1e293b;
+      --accent:#38bdf8;
+      --accent2:#a855f7;
+      --text:#e5e7eb;
+      --muted:#9ca3af;
+      --good:#22c55e;
+      --danger:#f97373;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,sans-serif;
+      background:radial-gradient(circle at top,#0b1120 0,#020617 50%,#020617 100%);
+      color:var(--text);
+      min-height:100vh;
+      padding:16px;
+      display:flex;
+      justify-content:center;
+      align-items:stretch;
+    }
+    .shell{
+      max-width:1200px;width:100%;
+      border-radius:14px;
+      border:1px solid rgba(148,163,184,0.4);
+      background:linear-gradient(145deg,rgba(15,23,42,0.97),rgba(2,6,23,0.97));
+      box-shadow:0 24px 60px rgba(15,23,42,0.8);
+      display:flex;flex-direction:column;overflow:hidden;
+    }
+    header{
+      padding:10px 14px;
+      border-bottom:1px solid rgba(51,65,85,0.9);
+      background:radial-gradient(circle at top left,rgba(56,189,248,0.15),transparent 55%);
+      display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;
+    }
+    header h1{
+      margin:0;font-size:18px;display:flex;align-items:center;gap:8px;
+    }
+    .badge{
+      font-size:11px;padding:2px 7px;border-radius:999px;
+      border:1px solid rgba(56,189,248,0.7);color:var(--accent);
+      text-transform:uppercase;letter-spacing:.08em;
+    }
+    header p{margin:2px 0 0;font-size:12px;color:var(--muted);}
+    main{
+      display:grid;
+      grid-template-columns:minmax(0,360px) minmax(0,1.4fr);
+      min-height:520px;
+    }
+    @media(max-width:960px){main{grid-template-columns:minmax(0,1fr);}}
+    .panel{padding:10px 12px;}
+    .left{
+      border-right:1px solid rgba(30,41,59,0.9);
+      background:
+        radial-gradient(circle at top left,rgba(56,189,248,0.06),transparent 60%),
+        radial-gradient(circle at bottom right,rgba(168,85,247,0.08),transparent 60%);
+    }
+    @media(max-width:960px){.left{border-right:none;border-bottom:1px solid rgba(30,41,59,0.9);}}
+    .right{background:radial-gradient(circle at center,rgba(15,23,42,0.95),#020617 80%);}
+    .section-title{
+      font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:8px;
+    }
+    .section-title::before{
+      content:"";width:8px;height:8px;border-radius:999px;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      box-shadow:0 0 10px rgba(56,189,248,0.9);
+    }
+    .card{
+      border-radius:10px;border:1px solid rgba(51,65,85,0.9);
+      background:rgba(15,23,42,0.98);
+      padding:8px 9px 10px;margin-bottom:8px;
+    }
+    .card-header{
+      display:flex;justify-content:space-between;gap:6px;align-items:center;margin-bottom:5px;
+    }
+    .card-title{font-size:13px;font-weight:600;}
+    .card-title small{font-size:11px;color:var(--muted);font-weight:400;}
+    .card-tag{
+      font-size:10px;text-transform:uppercase;letter-spacing:.08em;
+      padding:2px 6px;border-radius:999px;border:1px solid rgba(148,163,184,0.5);color:var(--muted);
+    }
+    .field{display:flex;flex-direction:column;gap:2px;margin-bottom:6px;}
+    .field label{
+      font-size:11px;color:var(--muted);
+      display:flex;justify-content:space-between;gap:8px;
+    }
+    .hint{font-size:10px;color:#64748b;}
+    input[type="number"],textarea,select{
+      width:100%;border-radius:8px;border:1px solid rgba(51,65,85,0.9);
+      background:rgba(15,23,42,0.98);color:var(--text);font-size:12px;
+      padding:5px 7px;outline:none;
+    }
+    textarea{
+      resize:vertical;min-height:70px;max-height:120px;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Courier New",monospace;
+      font-size:11px;
+    }
+    input:focus,textarea:focus,select:focus{
+      border-color:rgba(56,189,248,0.9);
+      box-shadow:0 0 0 1px rgba(56,189,248,0.4);
+      background:#020617;
+    }
+    .inline-row{display:flex;gap:8px;}
+    .inline-row .field{flex:1;}
+    .button-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
+    button{
+      border-radius:999px;border:none;padding:6px 12px;font-size:12px;
+      cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-weight:500;
+    }
+    button.primary{
+      background:radial-gradient(circle at top left,var(--accent),var(--accent2));
+      color:#020617;box-shadow:0 10px 24px rgba(56,189,248,0.5);
+    }
+    button.secondary{
+      background:rgba(15,23,42,0.98);color:var(--muted);
+      border:1px solid rgba(51,65,85,0.9);
+    }
+    button[disabled]{opacity:.5;cursor:default;box-shadow:none;}
+    .status-chip{
+      margin-top:5px;font-size:11px;display:inline-flex;align-items:center;gap:6px;
+      padding:3px 8px;border-radius:999px;border:1px dashed rgba(148,163,184,0.8);
+      background:rgba(15,23,42,0.96);color:var(--muted);
+    }
+    .status-dot{width:7px;height:7px;border-radius:999px;background:#6b7280;}
+    .status-dot.running{
+      background:var(--good);box-shadow:0 0 8px rgba(34,197,94,0.9);
+    }
+    .metrics-row{
+      display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:6px;margin-top:5px;font-size:11px;
+    }
+    .metric-pill{
+      border-radius:8px;border:1px solid rgba(51,65,85,0.9);
+      background:rgba(15,23,42,0.98);
+      padding:4px 6px;display:flex;flex-direction:column;gap:1px;
+    }
+    .metric-label{color:var(--muted);}
+    .metric-value{font-weight:600;color:var(--accent);}
+    .visual-wrapper{display:flex;flex-direction:column;gap:8px;height:100%;}
+    .canvas-card{
+      border-radius:12px;border:1px solid rgba(51,65,85,0.95);
+      background:
+        radial-gradient(circle at top left,rgba(30,64,175,0.6),transparent 55%),
+        radial-gradient(circle at bottom right,rgba(14,116,144,0.6),transparent 60%),
+        #020617;
+      padding:8px 8px 10px;display:flex;flex-direction:column;gap:6px;
+    }
+    .canvas-header{
+      display:flex;justify-content:space-between;gap:6px;
+      font-size:11px;color:rgba(226,232,240,0.9);flex-wrap:wrap;
+    }
+    .canvas-label{
+      text-transform:uppercase;letter-spacing:.1em;font-size:10px;
+      color:rgba(148,163,184,0.9);
+    }
+    #knapCanvas{
+      width:100%;height:220px;border-radius:9px;
+      border:1px solid rgba(15,23,42,0.95);
+      background:radial-gradient(circle at top,#020617,#020617 60%,#020617 100%);
+      display:block;
+    }
+    .sub-card{
+      border-radius:10px;border:1px solid rgba(51,65,85,0.95);
+      background:rgba(15,23,42,0.98);
+      padding:6px 7px 8px;display:flex;flex-direction:column;gap:4px;
+    }
+    .sub-header{
+      display:flex;justify-content:space-between;gap:6px;
+      font-size:11px;color:var(--muted);flex-wrap:wrap;
+    }
+    .two-tables{
+      display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;
+    }
+    @media(max-width:960px){.two-tables{grid-template-columns:minmax(0,1fr);}}
+    .tbl-wrap{
+      border-radius:8px;border:1px solid rgba(30,64,175,0.7);
+      background:rgba(15,23,42,1);max-height:160px;overflow:auto;
+    }
+    table{width:100%;border-collapse:collapse;font-size:10.5px;}
+    thead{position:sticky;top:0;background:rgba(15,23,42,1);z-index:1;}
+    th,td{
+      padding:4px 6px;border-bottom:1px solid rgba(30,64,175,0.4);
+      text-align:left;white-space:nowrap;
+    }
+    th{color:var(--muted);font-weight:500;}
+    tbody tr:nth-child(even){background:rgba(15,23,42,0.96);}
+    .log-card{
+      border-radius:10px;border:1px solid rgba(51,65,85,0.95);
+      background:radial-gradient(circle at bottom right,rgba(30,64,175,0.3),transparent 60%),rgba(2,6,23,0.98);
+      padding:6px 7px 8px;font-size:11px;display:flex;flex-direction:column;gap:4px;max-height:130px;
+    }
+    .log-body{
+      margin-top:3px;border-top:1px dashed rgba(51,65,85,0.9);
+      padding-top:3px;max-height:95px;overflow-y:auto;
+    }
+    .log-line{
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Courier New",monospace;
+      font-size:10.5px;color:rgba(209,213,219,0.98);
+      padding:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .g{color:var(--accent);}
+    .d{color:#fbbf24;}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div>
+      <h1>
+        Genetic Algorithm — 0/1 Knapsack
+        <span class="badge">Interactive</span>
+      </h1>
+      <p>Define items, capacity, and GA params. Population & fitness are shown, plus a column visualization of the best solution.</p>
+    </div>
+  </header>
+
+  <main>
+    <!-- LEFT: controls -->
+    <section class="panel left">
+      <div class="section-title">Knapsack Setup</div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Items <small>Genes = 1 (pick) or 0 (skip)</small></div>
+          <div class="card-tag">Problem input</div>
+        </div>
+        <div class="field">
+          <label>Items (value weight)
+            <span class="hint">One item per line: value weight</span>
+          </label>
+          <textarea id="knapItems" placeholder="Example:
+60 10
+100 20
+120 30"></textarea>
+        </div>
+        <div class="inline-row">
+          <div class="field">
+            <label>Capacity</label>
+            <input id="knapCapacity" type="number" min="1" value="50">
+          </div>
+          <div class="field">
+            <label>Penalty factor<span class="hint">For overweight solutions</span></label>
+            <input id="knapPenalty" type="number" min="0" step="0.1" value="2">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">GA Parameters & Fitness</div>
+          <div class="card-tag">Genetic algorithm</div>
+        </div>
+
+        <div class="field">
+          <label>Population size</label>
+          <input id="knapPopSize" type="number" min="2" max="500" value="60">
+        </div>
+
+        <div class="field">
+          <label>Initial chromosomes (optional)
+            <span class="hint">Each line: bitstring (length = #items), e.g. 1010</span>
+          </label>
+          <textarea id="knapInitialPop" placeholder="Example for 4 items:
+1010
+0011
+1110"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Fitness mode
+            <span class="hint">Automatic uses value & weight. Manual uses your fitness for gen 0.</span>
+          </label>
+          <select id="knapFitnessMode">
+            <option value="auto">Automatic</option>
+            <option value="manual">Manual: use my fitness for generation 0</option>
+          </select>
+        </div>
+
+        <div class="field" id="knapManualFitField" style="display:none;">
+          <label>Manual fitness values (generation 0)
+            <span class="hint">One positive value per chromosome line.</span>
+          </label>
+          <textarea id="knapManualFit" placeholder="Example:
+10
+7.5
+2"></textarea>
+        </div>
+
+        <div class="inline-row">
+          <div class="field">
+            <label>Generations</label>
+            <input id="knapGenerations" type="number" min="10" max="5000" value="300">
+          </div>
+          <div class="field">
+            <label>Crossover rate</label>
+            <input id="knapCrossover" type="number" min="0" max="1" step="0.05" value="0.9">
+          </div>
+        </div>
+        <div class="inline-row">
+          <div class="field">
+            <label>Mutation rate</label>
+            <input id="knapMutation" type="number" min="0" max="1" step="0.01" value="0.02">
+          </div>
+          <div class="field">
+            <label>Elites</label>
+            <input id="knapElites" type="number" min="0" max="10" value="1">
+          </div>
+        </div>
+
+        <div class="button-row">
+          <button type="button" class="primary" id="knapRunBtn">Run GA (Knapsack)</button>
+          <button type="button" class="secondary" id="knapStopBtn" disabled>Stop</button>
+        </div>
+
+        <div class="status-chip">
+          <span class="status-dot" id="knapStatusDot"></span>
+          <span id="knapStatusText">Idle — define items & GA parameters, then run.</span>
+        </div>
+
+        <div class="metrics-row">
+          <div class="metric-pill">
+            <span class="metric-label">Generation</span>
+            <span class="metric-value" id="knapMetricGen">–</span>
+          </div>
+          <div class="metric-pill">
+            <span class="metric-label">Best value</span>
+            <span class="metric-value" id="knapMetricBest">–</span>
+          </div>
+          <div class="metric-pill">
+            <span class="metric-label">Items</span>
+            <span class="metric-value" id="knapMetricItems">–</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: visualization & tables -->
+    <section class="panel right">
+      <div class="visual-wrapper">
+        <div class="canvas-card">
+          <div class="canvas-header">
+            <span class="canvas-label">0/1 Knapsack</span>
+            <span>Bars = items; blue = picked in best solution. Green bar shows weight vs capacity.</span>
+          </div>
+          <canvas id="knapCanvas" width="760" height="220"></canvas>
+        </div>
+
+        <div class="sub-card">
+          <div class="sub-header">
+            <span>GA Tables</span>
+            <span style="font-size:10px;">Population &amp; roulette-wheel selection</span>
+          </div>
+          <div class="two-tables">
+            <div>
+              <div style="font-size:10px;color:var(--muted);margin-bottom:2px;">Population (current generation)</div>
+              <div class="tbl-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th><th>Chromosome</th><th>Value</th><th>Weight</th><th>Fitness</th>
+                    </tr>
+                  </thead>
+                  <tbody id="knapPopTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--muted);margin-bottom:2px;">Roulette-wheel</div>
+              <div class="tbl-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th><th>Fᵢ</th><th>Pᵢ</th><th>Cᵢ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="knapRouletteTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="log-card">
+          <div class="sub-header">
+            <span>Evolution log</span>
+            <span style="font-size:10px;">Best value & feasible weight (sampled)</span>
+          </div>
+          <div class="log-body" id="knapLog"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  /* ---------- GA helpers ---------- */
+  function buildRouletteTable(fitness){
+    const total=fitness.reduce((a,b)=>a+b,0);
+    let cum=0;
+    return fitness.map((f,i)=>{
+      const p=f/total;
+      cum+=p;
+      return{index:i+1,fitness:f,prob:p,cum:cum};
+    });
+  }
+  function rouletteSelect(pop,fitness){
+    const total=fitness.reduce((a,b)=>a+b,0);
+    const r=Math.random()*total;
+    let acc=0;
+    for(let i=0;i<pop.length;i++){
+      acc+=fitness[i];
+      if(r<=acc)return pop[i];
+    }
+    return pop[pop.length-1];
+  }
+  function randomBitstring(len){
+    let s="";for(let i=0;i<len;i++)s+=Math.random()<0.5?"0":"1";return s;
+  }
+  function onePointCrossover(p1,p2){
+    const n=p1.length;
+    const point=Math.floor(Math.random()*(n-1))+1;
+    const c1=p1.slice(0,point)+p2.slice(point);
+    const c2=p2.slice(0,point)+p1.slice(point);
+    return[c1,c2];
+  }
+  function mutateBits(chrom,rate){
+    const arr=chrom.split("");
+    for(let i=0;i<arr.length;i++){
+      if(Math.random()<rate)arr[i]=arr[i]==="0"?"1":"0";
+    }
+    return arr.join("");
+  }
+  function knapFitness(chrom,items,capacity,penalty){
+    let value=0,weight=0;
+    for(let i=0;i<chrom.length;i++){
+      if(chrom[i]==="1"){
+        value+=items[i].v;
+        weight+=items[i].w;
+      }
+    }
+    if(weight<=capacity){
+      return{fit:value>0?value:1e-6,value,weight};
+    }else{
+      const over=weight-capacity;
+      const fit=Math.max(1e-6,value-penalty*over);
+      return{fit,value,weight};
+    }
+  }
+
+  /* ---------- DOM refs ---------- */
+  const knapCanvas=document.getElementById("knapCanvas");
+  const knapCtx=knapCanvas.getContext("2d");
+
+  const knapItemsText=document.getElementById("knapItems");
+  const knapCapacity=document.getElementById("knapCapacity");
+  const knapPenalty=document.getElementById("knapPenalty");
+  const knapPopSize=document.getElementById("knapPopSize");
+  const knapInitialPop=document.getElementById("knapInitialPop");
+  const knapFitnessMode=document.getElementById("knapFitnessMode");
+  const knapManualFitField=document.getElementById("knapManualFitField");
+  const knapManualFit=document.getElementById("knapManualFit");
+  const knapGenerations=document.getElementById("knapGenerations");
+  const knapCrossover=document.getElementById("knapCrossover");
+  const knapMutation=document.getElementById("knapMutation");
+  const knapElites=document.getElementById("knapElites");
+  const knapRunBtn=document.getElementById("knapRunBtn");
+  const knapStopBtn=document.getElementById("knapStopBtn");
+  const knapStatusDot=document.getElementById("knapStatusDot");
+  const knapStatusText=document.getElementById("knapStatusText");
+  const knapMetricGen=document.getElementById("knapMetricGen");
+  const knapMetricBest=document.getElementById("knapMetricBest");
+  const knapMetricItems=document.getElementById("knapMetricItems");
+  const knapLog=document.getElementById("knapLog");
+  const knapPopTableBody=document.getElementById("knapPopTableBody");
+  const knapRouletteTableBody=document.getElementById("knapRouletteTableBody");
+
+  const knapState={
+    items:[],
+    capacity:0,
+    population:[],
+    fitness:[],
+    bestChrom:null,
+    bestValue:-Infinity,
+    bestWeight:0,
+    gen:0,
+    maxGen:0,
+    running:false,
+    timer:null,
+    manualFitness:[],
+    useManualGen0:false,
+    logEvery:10
+  };
+
+  function setStatus(running,text){
+    knapState.running=running;
+    knapStatusText.textContent=text;
+    if(running){
+      knapStatusDot.classList.add("running");
+      knapRunBtn.disabled=true;knapStopBtn.disabled=false;
+    }else{
+      knapStatusDot.classList.remove("running");
+      knapRunBtn.disabled=false;knapStopBtn.disabled=true;
+    }
+  }
+  function resetMetrics(){
+    knapMetricGen.textContent="–";
+    knapMetricBest.textContent="–";
+    knapMetricItems.textContent=knapState.items.length||"–";
+  }
+  function updateMetrics(){
+    knapMetricGen.textContent=knapState.gen;
+    knapMetricBest.textContent=knapState.bestValue===-Infinity?"–":knapState.bestValue.toFixed(2);
+    knapMetricItems.textContent=knapState.items.length;
+  }
+  function appendLog(msg){
+    const div=document.createElement("div");
+    div.className="log-line";
+    div.innerHTML=msg;
+    knapLog.appendChild(div);
+    knapLog.scrollTop=knapLog.scrollHeight;
+  }
+  function clearLog(){knapLog.innerHTML="";}
+
+  function clearCanvas(){
+    knapCtx.clearRect(0,0,knapCanvas.width,knapCanvas.height);
+    knapCtx.fillStyle="#020617";
+    knapCtx.fillRect(0,0,knapCanvas.width,knapCanvas.height);
+  }
+  function draw(){
+    clearCanvas();
+    const items=knapState.items;
+    if(!items||!items.length)return;
+    const n=items.length;
+    const padL=40,padR=10,padT=24,padB=32;
+    const innerW=knapCanvas.width-padL-padR;
+    const innerH=knapCanvas.height-padT-padB;
+
+    let maxValue=0;
+    items.forEach(it=>{if(it.v>maxValue)maxValue=it.v;});
+    if(maxValue===0)maxValue=1;
+
+    const barWidth=innerW/(n*1.3);
+    const gap=barWidth*0.3;
+    const best=knapState.bestChrom;
+
+    for(let i=0;i<n;i++){
+      const item=items[i];
+      const value=item.v;
+      const h=(value/maxValue)*innerH;
+      const x=padL+i*(barWidth+gap);
+      const y=padT+innerH-h;
+      const selected=best&&best[i]==="1";
+
+      knapCtx.save();
+      knapCtx.beginPath();
+      knapCtx.rect(x,y,barWidth,h);
+      knapCtx.fillStyle=selected?"#38bdf8":"rgba(148,163,184,0.4)";
+      if(selected){
+        knapCtx.shadowColor="rgba(56,189,248,0.9)";
+        knapCtx.shadowBlur=10;
+      }
+      knapCtx.fill();
+      knapCtx.restore();
+
+      knapCtx.fillStyle="#e5e7eb";
+      knapCtx.font="10px system-ui";
+      knapCtx.textAlign="center";
+      knapCtx.textBaseline="top";
+      knapCtx.fillText(String(i),x+barWidth/2,padT+innerH+2);
+    }
+
+    if(best){
+      let used=0;
+      for(let i=0;i<n;i++){
+        if(best[i]==="1")used+=items[i].w;
+      }
+      const cap=knapState.capacity||1;
+      const ratio=Math.min(1,used/cap);
+      const barW=innerW*ratio;
+
+      knapCtx.save();
+      knapCtx.fillStyle="rgba(34,197,94,0.2)";
+      knapCtx.fillRect(padL,padT-10,innerW,6);
+      knapCtx.fillStyle="#22c55e";
+      knapCtx.fillRect(padL,padT-10,barW,6);
+      knapCtx.restore();
+
+      knapCtx.fillStyle="#e5e7eb";
+      knapCtx.font="10px system-ui";
+      knapCtx.textAlign="left";
+      knapCtx.textBaseline="bottom";
+      knapCtx.fillText(
+        "Weight: "+used.toFixed(1)+" / "+cap.toFixed(1),
+        padL,padT-14
+      );
+    }
+  }
+
+  function parseItems(){
+    const txt=knapItemsText.value.trim();
+    if(!txt)throw new Error("Enter at least one item (value weight).");
+    const lines=txt.split("\n").map(l=>l.trim()).filter(Boolean);
+    const items=[];
+    for(const line of lines){
+      const parts=line.split(/\s+/).filter(Boolean);
+      if(parts.length<2)continue;
+      const v=parseFloat(parts[0]),w=parseFloat(parts[1]);
+      if(isNaN(v)||isNaN(w))throw new Error('Invalid item line: "'+line+'"');
+      items.push({v,w});
+    }
+    if(!items.length)throw new Error("No valid items parsed.");
+    return items;
+  }
+
+  function updateTables(pop,fitness){
+    knapPopTableBody.innerHTML="";
+    knapRouletteTableBody.innerHTML="";
+    if(!pop||!pop.length)return;
+
+    const items=knapState.items;
+    const capacity=knapState.capacity;
+    const penalty=parseFloat(knapPenalty.value)||2;
+    const maxRows=Math.min(pop.length,12);
+
+    for(let i=0;i<maxRows;i++){
+      const chrom=pop[i];
+      const res=knapFitness(chrom,items,capacity,penalty);
+      const tr=document.createElement("tr");
+      tr.innerHTML=
+        "<td>"+(i+1)+"</td>"+
+        "<td>"+chrom+"</td>"+
+        "<td>"+res.value.toFixed(2)+"</td>"+
+        "<td>"+res.weight.toFixed(2)+"</td>"+
+        "<td>"+fitness[i].toFixed(2)+"</td>";
+      knapPopTableBody.appendChild(tr);
+    }
+    const rows=buildRouletteTable(fitness);
+    for(let i=0;i<Math.min(rows.length,12);i++){
+      const r=rows[i];
+      const tr=document.createElement("tr");
+      tr.innerHTML=
+        "<td>"+r.index+"</td>"+
+        "<td>"+r.fitness.toFixed(2)+"</td>"+
+        "<td>"+r.prob.toFixed(3)+"</td>"+
+        "<td>"+Math.min(r.cum,1).toFixed(3)+"</td>";
+      knapRouletteTableBody.appendChild(tr);
+    }
+  }
+
+  function step(){
+    const items=knapState.items;
+    const capacity=knapState.capacity;
+    const penalty=parseFloat(knapPenalty.value)||2;
+    const pop=knapState.population;
+    const popSize=pop.length;
+    const mutRate=parseFloat(knapMutation.value)||0.02;
+    const crossRate=parseFloat(knapCrossover.value)||0.9;
+    const elites=Math.max(0,Math.min(popSize-1,parseInt(knapElites.value,10)||0));
+
+    const fitness=[];
+    let bestFit=-Infinity,bestChrom=null,bestValue=0,bestWeight=0;
+    for(let i=0;i<pop.length;i++){
+      const chrom=pop[i];
+      const res=knapFitness(chrom,items,capacity,penalty);
+      let fit=res.fit;
+      if(knapState.gen===0&&knapState.useManualGen0&&
+         knapState.manualFitness&&knapState.manualFitness.length===pop.length){
+        fit=Math.max(1e-6,knapState.manualFitness[i]);
+      }
+      fitness.push(fit);
+      if(res.fit>bestFit){
+        bestFit=res.fit;
+        bestChrom=chrom;
+        bestValue=res.value;
+        bestWeight=res.weight;
+      }
+    }
+
+    knapState.fitness=fitness;
+    if(bestFit>0&&bestValue>knapState.bestValue){
+      knapState.bestValue=bestValue;
+      knapState.bestWeight=bestWeight;
+      knapState.bestChrom=bestChrom;
+    }
+
+    updateTables(pop,fitness);
+    draw();
+    updateMetrics();
+
+    if(knapState.gen%knapState.logEvery===0||knapState.gen===0){
+      appendLog('<span class="g">Gen '+knapState.gen+
+        '</span> · <span class="d">best value ≈ '+
+        knapState.bestValue.toFixed(2)+' (w='+
+        knapState.bestWeight.toFixed(2)+')</span>');
+    }
+
+    const newPop=[];
+    if(elites>0){
+      const idxs=pop.map((_,i)=>i);
+      idxs.sort((a,b)=>fitness[b]-fitness[a]);
+      for(let i=0;i<elites;i++)newPop.push(pop[idxs[i]]);
+    }
+    while(newPop.length<popSize){
+      const p1=rouletteSelect(pop,fitness);
+      const p2=rouletteSelect(pop,fitness);
+      let c1=p1,c2=p2;
+      if(Math.random()<crossRate){
+        const cs=onePointCrossover(p1,p2);c1=cs[0];c2=cs[1];
+      }
+      c1=mutateBits(c1,mutRate);
+      newPop.push(c1);
+      if(newPop.length<popSize){
+        c2=mutateBits(c2,mutRate);
+        newPop.push(c2);
+      }
+    }
+    knapState.population=newPop;
+    knapState.gen++;
+  }
+
+  function startGA(){
+    let items;
+    try{items=parseItems();}catch(err){alert("Knapsack: "+err.message);return;}
+    const cap=parseFloat(knapCapacity.value);
+    if(isNaN(cap)||cap<=0){alert("Capacity must be > 0.");return;}
+    const maxGen=parseInt(knapGenerations.value,10);
+    if(!maxGen||maxGen<1){alert("Generations must be ≥ 1.");return;}
+
+    knapState.items=items;
+    knapState.capacity=cap;
+    knapState.bestChrom=null;
+    knapState.bestValue=-Infinity;
+    knapState.bestWeight=0;
+    knapState.gen=0;
+    knapState.maxGen=maxGen;
+    resetMetrics();
+    clearLog();
+    draw();
+
+    const nItems=items.length;
+    const mode=knapFitnessMode.value;
+    const manualText=knapInitialPop.value.trim();
+    const initial=[];
+    if(manualText){
+      const lines=manualText.split("\n").map(l=>l.trim()).filter(Boolean);
+      lines.forEach(line=>{
+        if(line.length!==nItems)return;
+        if(!/^[01]+$/.test(line))return;
+        initial.push(line);
+      });
+    }
+
+    if(mode==="manual"){
+      if(initial.length<2){
+        alert("Manual fitness: at least 2 valid chromosomes required.");
+        return;
+      }
+      const fitText=knapManualFit.value.trim();
+      if(!fitText){
+        alert("Manual fitness: enter one fitness per chromosome line.");
+        return;
+      }
+      const fLines=fitText.split("\n").map(l=>l.trim()).filter(Boolean);
+      if(fLines.length!==initial.length){
+        alert("Manual fitness: number of fitness values must match chromosomes.");
+        return;
+      }
+      const manualFitness=[];
+      for(const line of fLines){
+        const v=parseFloat(line);
+        if(isNaN(v)||v<=0){
+          alert("Manual fitness: all values must be positive.");
+          return;
+        }
+        manualFitness.push(v);
+      }
+      knapState.population=initial;
+      knapState.manualFitness=manualFitness;
+      knapState.useManualGen0=true;
+    }else{
+      const popSize=parseInt(knapPopSize.value,10);
+      if(!popSize||popSize<2){alert("Population size must be ≥ 2.");return;}
+      const needed=Math.max(0,popSize-initial.length);
+      const randomPop=[];
+      for(let i=0;i<needed;i++)randomPop.push(randomBitstring(nItems));
+      knapState.population=initial.concat(randomPop);
+      knapState.manualFitness=[];
+      knapState.useManualGen0=false;
+    }
+
+    setStatus(true,"Running GA for Knapsack…");
+    if(knapState.timer)clearInterval(knapState.timer);
+    knapState.timer=setInterval(function(){
+      if(!knapState.running)return;
+      if(knapState.gen>=knapState.maxGen){
+        clearInterval(knapState.timer);knapState.timer=null;
+        setStatus(false,"Finished — Knapsack GA stopped at generation "+knapState.gen);
+        return;
+      }
+      step();
+    },40);
+  }
+
+  function stopGA(){
+    if(knapState.timer){clearInterval(knapState.timer);knapState.timer=null;}
+    setStatus(false,"Stopped — Knapsack GA halted.");
+  }
+
+  knapRunBtn.addEventListener("click",function(){stopGA();startGA();});
+  knapStopBtn.addEventListener("click",stopGA);
+  knapFitnessMode.addEventListener("change",function(){
+    const mode=knapFitnessMode.value;
+    knapManualFitField.style.display=mode==="manual"?"block":"none";
+  });
+
+  clearCanvas();
+  setStatus(false,"Idle — define items & GA parameters, then run.");
+})();
+</script>
+</body>
+</html>

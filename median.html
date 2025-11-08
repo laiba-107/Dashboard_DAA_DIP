@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Median Filter - DIP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #020617;
+      --border: #1f2937;
+      --accent: #eab308;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #0f172a 0, #020617 50%, #000 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 24px;
+    }
+    .card {
+      width: 100%;
+      max-width: 900px;
+      background: rgba(15, 23, 42, 0.95);
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      padding: 18px 20px 22px;
+    }
+    h1 { margin: 0 0 4px; font-size: 1.6rem; }
+    .subtitle { font-size: 0.9rem; color: var(--muted); margin-bottom: 16px; }
+    .top-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+      align-items: center;
+    }
+    .upload-label {
+      position: relative;
+      overflow: hidden;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-size: 0.9rem;
+      cursor: pointer;
+      background: rgba(15, 23, 42, 0.9);
+    }
+    .upload-label input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .btn {
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #0b1220;
+      color: var(--text);
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .btn.primary {
+      border-color: var(--accent);
+      background: linear-gradient(135deg, #ca8a04, #eab308);
+      color: #0b1120;
+      font-weight: 600;
+    }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.85rem;
+    }
+    input[type="number"] {
+      width: 80px;
+      background: #020617;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      color: var(--text);
+      font-size: 0.85rem;
+    }
+    .hint { color: var(--muted); font-size: 0.8rem; }
+    .canvas-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 10px;
+    }
+    .canvas-panel {
+      background: #020617;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      padding: 10px;
+    }
+    .canvas-panel h2 {
+      font-size: 0.95rem;
+      margin: 0 0 6px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    canvas {
+      width: 100%;
+      max-height: 450px;
+      display: block;
+      border-radius: 10px;
+      background: #020617;
+    }
+    .status { margin-top: 8px; font-size: 0.8rem; color: var(--muted); }
+    @media (max-width: 900px) { .canvas-row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Median Filter</h1>
+    <div class="subtitle">
+      Reduce salt-and-pepper noise using a k×k median filter.
+    </div>
+
+    <div class="top-row">
+      <label class="upload-label">
+        <input type="file" id="fileInput" accept="image/*" />
+        <span>📂 Choose Image</span>
+      </label>
+      <div class="field">
+        <label for="kSize">Kernel size (odd)</label>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="number" id="kSize" min="3" step="2" value="3" />
+          <span class="hint">3, 5, 7, …</span>
+        </div>
+      </div>
+      <button class="btn primary" id="applyBtn" disabled>Apply Median Filter</button>
+    </div>
+
+    <div class="canvas-row">
+      <div class="canvas-panel">
+        <h2>Original <span id="origSize" class="hint"></span></h2>
+        <canvas id="origCanvas"></canvas>
+      </div>
+      <div class="canvas-panel">
+        <h2>Filtered <span id="info" class="hint"></span></h2>
+        <canvas id="procCanvas"></canvas>
+      </div>
+    </div>
+
+    <div class="status" id="status">Load an image to begin.</div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById("fileInput");
+    const applyBtn = document.getElementById("applyBtn");
+    const kSizeInput = document.getElementById("kSize");
+    const origCanvas = document.getElementById("origCanvas");
+    const procCanvas = document.getElementById("procCanvas");
+    const origCtx = origCanvas.getContext("2d");
+    const procCtx = procCanvas.getContext("2d");
+    const statusEl = document.getElementById("status");
+    const origSizeEl = document.getElementById("origSize");
+    const infoEl = document.getElementById("info");
+    let imgLoaded = false;
+
+    fileInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxWidth = 600;
+          const scale = img.width > maxWidth ? maxWidth / img.width : 1;
+          const w = Math.round(img.width * scale);
+          const h = Math.round(img.height * scale);
+          origCanvas.width = w;
+          origCanvas.height = h;
+          procCanvas.width = w;
+          procCanvas.height = h;
+          origCtx.drawImage(img, 0, 0, w, h);
+          procCtx.drawImage(img, 0, 0, w, h);
+          imgLoaded = true;
+          applyBtn.disabled = false;
+          origSizeEl.textContent = `${w}×${h}px`;
+          infoEl.textContent = "";
+          statusEl.textContent = "Image loaded. Choose kernel size and apply filter.";
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function median(values) {
+      values.sort((a, b) => a - b);
+      const mid = Math.floor(values.length / 2);
+      return values[mid];
+    }
+
+    function applyMedianFilter(k) {
+      if (!imgLoaded) return;
+      if (k % 2 === 0 || k < 3) {
+        throw new Error("Kernel size must be an odd integer ≥ 3.");
+      }
+      const src = origCtx.getImageData(0, 0, origCanvas.width, origCanvas.height);
+      const dst = procCtx.createImageData(src.width, src.height);
+      const { width: w, height: h, data: s } = src;
+      const d = dst.data;
+      const r = Math.floor(k / 2);
+
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const idx = (y * w + x) * 4;
+
+          if (x < r || x >= w - r || y < r || y >= h - r) {
+            d[idx] = s[idx];
+            d[idx + 1] = s[idx + 1];
+            d[idx + 2] = s[idx + 2];
+            d[idx + 3] = s[idx + 3];
+            continue;
+          }
+
+          const windowR = [];
+          const windowG = [];
+          const windowB = [];
+
+          for (let j = -r; j <= r; j++) {
+            for (let i = -r; i <= r; i++) {
+              const xx = x + i;
+              const yy = y + j;
+              const sIdx = (yy * w + xx) * 4;
+              windowR.push(s[sIdx]);
+              windowG.push(s[sIdx + 1]);
+              windowB.push(s[sIdx + 2]);
+            }
+          }
+
+          d[idx] = median(windowR);
+          d[idx + 1] = median(windowG);
+          d[idx + 2] = median(windowB);
+          d[idx + 3] = 255;
+        }
+      }
+      procCtx.putImageData(dst, 0, 0);
+    }
+
+    applyBtn.addEventListener("click", () => {
+      try {
+        const k = parseInt(kSizeInput.value, 10);
+        if (Number.isNaN(k)) throw new Error("Invalid kernel size.");
+        applyMedianFilter(k);
+        infoEl.textContent = `${k}×${k} median filter`;
+        statusEl.textContent = "Median filter applied.";
+      } catch (err) {
+        statusEl.textContent = "Error: " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>

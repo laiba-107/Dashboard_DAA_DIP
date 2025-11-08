@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Branch & Bound — TSP Visualizer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- D3.js for tree visualization -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #020617;
+      --panel: #02091a;
+      --panel2: #020b1f;
+      --border: #1e293b;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56,189,248,0.12);
+      --accent2: #a855f7;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --good: #22c55e;
+      --danger: #f97373;
+      --shadow-soft: 0 18px 40px rgba(15,23,42,0.85);
+      --radius-xl: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, Ubuntu, "Helvetica Neue", Arial, sans-serif;
+      background: radial-gradient(circle at top, #020617 0, #020617 40%, #000 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(90deg, #020617, #020617 40%, #020818);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    header h1 span.logo {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, #38bdf8, #0f172a 70%);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      color: white;
+      box-shadow: 0 0 0 1px rgba(148,163,184,0.35);
+    }
+
+    header .subtitle {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    main {
+      flex: 1;
+      padding: 18px 20px 24px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.1fr 1.1fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 1024px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: radial-gradient(circle at top left, #020b1f, #020617 55%);
+      border-radius: var(--radius-xl);
+      border: 1px solid rgba(30,41,59,0.9);
+      box-shadow: var(--shadow-soft);
+      padding: 16px 16px 18px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background:
+        radial-gradient(circle at 0 0, rgba(56,189,248,0.08), transparent 55%),
+        radial-gradient(circle at 100% 0, rgba(168,85,247,0.08), transparent 55%);
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .card-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title-badge {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      color: var(--muted);
+    }
+
+    .card-description {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    input[type="number"] {
+      background: rgba(15,23,42,0.85);
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.5);
+      color: var(--text);
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      outline: none;
+      min-width: 80px;
+    }
+
+    input[type="number"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(56,189,248,0.35);
+    }
+
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    button {
+      border-radius: 999px;
+      border: 1px solid rgba(56,189,248,0.6);
+      background: radial-gradient(circle at 20% 0, #38bdf8, #0f172a 70%);
+      color: white;
+      padding: 6px 13px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+      box-shadow: 0 6px 20px rgba(15,23,42,0.85);
+      white-space: nowrap;
+    }
+
+    button.secondary {
+      background: rgba(15,23,42,0.85);
+      border-color: rgba(148,163,184,0.9);
+      color: var(--muted);
+      box-shadow: none;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 30px rgba(15,23,42,0.88);
+    }
+
+    button.secondary:hover {
+      box-shadow: 0 8px 20px rgba(15,23,42,0.85);
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: default;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .matrix-container {
+      border-radius: 16px;
+      border: 1px dashed rgba(148,163,184,0.6);
+      padding: 10px;
+      background: radial-gradient(circle at top, rgba(15,23,42,0.9), rgba(2,6,23,0.95));
+      overflow-x: auto;
+    }
+
+    .matrix-table {
+      border-collapse: collapse;
+      font-size: 0.78rem;
+      min-width: 100%;
+    }
+
+    .matrix-table th,
+    .matrix-table td {
+      border: 1px solid rgba(30,64,175,0.7);
+      padding: 4px 7px;
+      text-align: center;
+      min-width: 32px;
+    }
+
+    .matrix-table th {
+      background: linear-gradient(90deg, rgba(37,99,235,0.35), rgba(30,64,175,0.7));
+      color: #e5e7eb;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .matrix-table td {
+      background: rgba(15,23,42,0.9);
+      color: #e5e7eb;
+    }
+
+    .matrix-table td.diagonal {
+      background: rgba(15,23,42,0.4);
+      color: rgba(148,163,184,0.7);
+    }
+
+    .matrix-table td.inf {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .matrix-input-table input {
+      width: 56px;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      text-align: center;
+      font-size: 0.78rem;
+      padding: 3px;
+      outline: none;
+    }
+
+    .matrix-input-table td {
+      padding: 2px 4px;
+    }
+
+    .matrix-input-table input:focus {
+      background: rgba(30,64,175,0.65);
+      border-radius: 8px;
+    }
+
+    .matrix-caption {
+      font-size: 0.76rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .matrices-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 1024px) {
+      .matrices-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.7);
+      font-size: 0.74rem;
+      color: var(--muted);
+      background: rgba(15,23,42,0.85);
+    }
+
+    .pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 3px rgba(56,189,248,0.35);
+    }
+
+    .results-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 6px;
+      font-size: 0.8rem;
+    }
+
+    .tag {
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      border: 1px solid rgba(148,163,184,0.7);
+      color: var(--muted);
+      background: rgba(15,23,42,0.8);
+    }
+
+    .tag.good {
+      border-color: rgba(34,197,94,0.8);
+      color: var(--good);
+      background: rgba(22,163,74,0.08);
+    }
+
+    .tag.bad {
+      border-color: rgba(248,113,113,0.8);
+      color: var(--danger);
+      background: rgba(248,113,113,0.06);
+    }
+
+    /* Tree card */
+    #treeContainer {
+      border-radius: 16px;
+      border: 1px dashed rgba(148,163,184,0.6);
+      background: radial-gradient(circle at top, rgba(15,23,42,0.9), rgba(2,6,23,0.95));
+      padding: 4px 4px 10px;
+      height: 430px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #treeSvg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .tree-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 4px;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .tree-legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tree-node-circle {
+      stroke-width: 1.2px;
+    }
+
+    .tree-node-label {
+      font-size: 10px;
+      fill: #e5e7eb;
+      paint-order: stroke;
+      stroke: rgba(15,23,42,0.95);
+      stroke-width: 3px;
+      stroke-linejoin: round;
+    }
+
+    .tree-link {
+      fill: none;
+      stroke-width: 1.1px;
+    }
+
+    .tree-edge-label {
+      font-size: 9px;
+      fill: #cbd5f5;
+      paint-order: stroke;
+      stroke: rgba(15,23,42,0.95);
+      stroke-width: 2px;
+    }
+
+    footer {
+      font-size: 0.7rem;
+      color: var(--muted);
+      padding: 6px 18px 10px;
+      text-align: right;
+      border-top: 1px solid rgba(15,23,42,0.9);
+      background: rgba(2,6,23,0.98);
+    }
+  </style>
+</head>
+
+<body>
+<header>
+  <div>
+    <h1>
+      <span class="logo">T</span>
+      Branch &amp; Bound — TSP
+    </h1>
+    <div class="subtitle">
+      Enter your own cost matrix, see Setting / Row / Column reduction tables and the Branch &amp; Bound search tree.
+    </div>
+  </div>
+  <div class="pill">
+    <span class="pill-dot"></span>
+    <span>Exact TSP solver · Small instances (3–9 cities)</span>
+  </div>
+</header>
+
+<main>
+  <div class="layout">
+    <!-- LEFT: Input + Matrices + Result -->
+    <section class="card">
+      <div class="card-inner">
+        <div class="card-header">
+          <div class="card-title">
+            TSP Input &amp; Matrix Reductions
+            <span class="card-title-badge">Branch &amp; Bound</span>
+          </div>
+        </div>
+        <p class="card-description">
+          1) Choose the number of cities.  
+          2) Click <strong>“Generate matrix”</strong> to create an editable table.  
+          3) Fill in your own costs (leave blank for ∞).  
+          4) Click <strong>“Solve TSP”</strong> to visualize the algorithm.
+        </p>
+
+        <div class="controls-row">
+          <div>
+            <label for="cityCount">Number of cities (3–9)</label>
+            <input type="number" id="cityCount" min="3" max="9" value="4" />
+          </div>
+          <button id="generateMatrixBtn">
+            ⚙️ Generate matrix
+          </button>
+          <button id="solveBtn" disabled>
+            🚀 Solve TSP (Branch &amp; Bound)
+          </button>
+        </div>
+
+        <div id="matrixInputWrapper" class="matrix-container" style="margin-top:8px; display:none;">
+          <div class="matrix-caption">
+            Enter the cost from city <strong>i</strong> (row) to city <strong>j</strong> (column).  
+            Diagonal is fixed to 0 and ignored. Empty/invalid = <em>∞</em>.  
+            <strong>Note:</strong> i and j are numbered from 1.
+          </div>
+          <div id="matrixInputArea"></div>
+        </div>
+
+        <div class="matrices-grid" id="matricesGrid" style="display:none;">
+          <div>
+            <div class="matrix-caption"><strong>Setting Matrix</strong> (original costs)</div>
+            <div class="matrix-container">
+              <div id="settingMatrixArea"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="matrix-caption"><strong>Row Reduction</strong> (reduced rows)</div>
+            <div class="matrix-container">
+              <div id="rowReductionArea"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="matrix-caption"><strong>Column Reduction</strong> (reduced columns)</div>
+            <div class="matrix-container">
+              <div id="colReductionArea"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="results-summary" id="reductionSummary" style="display:none;">
+          <span class="tag" id="rowRedTag"></span>
+          <span class="tag" id="colRedTag"></span>
+          <span class="tag" id="lbTag"></span>
+        </div>
+
+        <div class="results-summary" id="resultsSummary" style="display:none;">
+          <span class="tag good" id="bestCostTag"></span>
+          <span class="tag" id="bestPathTag"></span>
+          <span class="tag" id="nodesExploredTag"></span>
+          <span class="tag" id="prunedTag"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: Tree -->
+    <section class="card">
+      <div class="card-inner">
+        <div class="card-header">
+          <div class="card-title">
+            Branch &amp; Bound Search Tree
+            <span class="card-title-badge">Visualization</span>
+          </div>
+        </div>
+        <p class="card-description">
+          Each node shows: <code>path</code>, <code>g = cost</code>, and <code>bound</code> (here bound = cost so far).  
+          Edges are labeled with the cost added by that move.  
+          Pruned nodes are clearly marked when <code>bound ≥ best</code>.  
+          <strong>Note:</strong> cities in the path are shown starting from 1.
+        </p>
+
+        <div class="tree-legend">
+          <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="none" stroke="#38bdf8" stroke-width="1.2"/></svg> Active explored state</span>
+          <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="#22c55e" stroke="#4ade80" stroke-width="1.2"/></svg> Complete tour (leaf)</span>
+          <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="#0f172a" stroke="#f97373" stroke-width="1.2"/></svg> Pruned by bound</span>
+        </div>
+
+        <div id="treeContainer">
+          <svg id="treeSvg"></svg>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  Tip: This demo uses DFS branch &amp; bound with a simple bound = current path cost.  
+  Keep the number of cities small (≤ 9) for a readable tree.
+</footer>
+
+<script>
+(function() {
+  const generateBtn = document.getElementById("generateMatrixBtn");
+  const solveBtn = document.getElementById("solveBtn");
+  const cityCountInput = document.getElementById("cityCount");
+  const matrixInputWrapper = document.getElementById("matrixInputWrapper");
+  const matrixInputArea = document.getElementById("matrixInputArea");
+  const matricesGrid = document.getElementById("matricesGrid");
+  const settingMatrixArea = document.getElementById("settingMatrixArea");
+  const rowReductionArea = document.getElementById("rowReductionArea");
+  const colReductionArea = document.getElementById("colReductionArea");
+  const reductionSummary = document.getElementById("reductionSummary");
+  const rowRedTag = document.getElementById("rowRedTag");
+  const colRedTag = document.getElementById("colRedTag");
+  const lbTag = document.getElementById("lbTag");
+
+  const resultsSummary = document.getElementById("resultsSummary");
+  const bestCostTag = document.getElementById("bestCostTag");
+  const bestPathTag = document.getElementById("bestPathTag");
+  const nodesExploredTag = document.getElementById("nodesExploredTag");
+  const prunedTag = document.getElementById("prunedTag");
+
+  let currentMatrix = null;
+  let N = 0;
+
+  generateBtn.addEventListener("click", () => {
+    const n = parseInt(cityCountInput.value, 10);
+    if (isNaN(n) || n < 3 || n > 9) {
+      alert("Please choose a city count between 3 and 9.");
+      return;
+    }
+    N = n;
+    buildMatrixInput(n);
+    currentMatrix = null;
+    matricesGrid.style.display = "none";
+    reductionSummary.style.display = "none";
+    resultsSummary.style.display = "none";
+    clearTree();
+    solveBtn.disabled = false;
+  });
+
+  solveBtn.addEventListener("click", () => {
+    const matrix = readMatrixFromInputs();
+    if (!matrix) return;
+    currentMatrix = matrix;
+
+    // Compute and display reductions for the root (Setting / Row / Column)
+    const reductions = computeReductions(matrix);
+
+    settingMatrixArea.innerHTML = renderMatrixHtml(matrix);
+    rowReductionArea.innerHTML = renderMatrixHtml(reductions.rowReduced);
+    colReductionArea.innerHTML = renderMatrixHtml(reductions.colReduced);
+
+    matricesGrid.style.display = "grid";
+
+    rowRedTag.textContent = `Row reduction cost = ${reductions.rowRedCost}`;
+    colRedTag.textContent = `Column reduction cost = ${reductions.colRedCost}`;
+    lbTag.textContent = `Root lower bound = ${reductions.lowerBound}`;
+    reductionSummary.style.display = "flex";
+
+    // Run branch & bound TSP search
+    const result = runBranchAndBound(matrix);
+
+    bestCostTag.textContent = isFinite(result.bestCost)
+      ? `Best tour cost = ${result.bestCost}`
+      : "Best tour cost = ∞ (no Hamiltonian cycle)";
+    if (result.bestPath && isFinite(result.bestCost)) {
+      const displayPath = result.bestPath.map(i => i + 1).join(" → ");
+      bestPathTag.textContent = `Best tour = ${displayPath}`;
+    } else {
+      bestPathTag.textContent = "Best tour = No Hamiltonian cycle";
+    }
+    nodesExploredTag.textContent = `Nodes explored = ${result.nodesExplored}`;
+    prunedTag.textContent = `Nodes pruned = ${result.prunedCount}`;
+    resultsSummary.style.display = "flex";
+
+    // Render tree
+    renderTree(result.treeNodes);
+  });
+
+  function buildMatrixInput(n) {
+    matrixInputWrapper.style.display = "block";
+    const table = document.createElement("table");
+    table.className = "matrix-table matrix-input-table";
+    const thead = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+    const corner = document.createElement("th");
+    corner.textContent = "i \\ j";
+    headerRow.appendChild(corner);
+
+    for (let j = 0; j < n; j++) {
+      const th = document.createElement("th");
+      th.textContent = j + 1;  // 1-based
+      headerRow.appendChild(th);
+    }
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    for (let i = 0; i < n; i++) {
+      const tr = document.createElement("tr");
+      const th = document.createElement("th");
+      th.textContent = i + 1;  // 1-based
+      tr.appendChild(th);
+
+      for (let j = 0; j < n; j++) {
+        const td = document.createElement("td");
+        if (i === j) {
+          td.classList.add("diagonal");
+          const span = document.createElement("span");
+          span.textContent = "0";
+          td.appendChild(span);
+        } else {
+          const input = document.createElement("input");
+          input.type = "number";
+          input.placeholder = "∞";
+          input.step = "any";
+          input.min = "0";
+          td.appendChild(input);
+        }
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+
+    matrixInputArea.innerHTML = "";
+    matrixInputArea.appendChild(table);
+  }
+
+  function readMatrixFromInputs() {
+    const table = matrixInputArea.querySelector("table");
+    if (!table) return null;
+
+    const rows = table.querySelectorAll("tbody tr");
+    const n = rows.length;
+    const matrix = Array.from({ length: n }, () => Array(n).fill(Infinity));
+
+    for (let i = 0; i < n; i++) {
+      const cells = rows[i].querySelectorAll("td");
+      for (let j = 0; j < n; j++) {
+        if (i === j) {
+          matrix[i][j] = 0;
+          continue;
+        }
+        const input = cells[j].querySelector("input");
+        const value = input.value.trim();
+        if (!value) {
+          matrix[i][j] = Infinity;
+        } else {
+          const num = parseFloat(value);
+          if (isNaN(num) || num < 0) {
+            alert(`Invalid cost at cell (i=${i + 1}, j=${j + 1}). Enter a non-negative number or leave blank for ∞.`);
+            return null;
+          }
+          matrix[i][j] = num;
+        }
+      }
+    }
+    return matrix;
+  }
+
+  // ----- Matrix reductions (root only, for visualization) -----
+  function computeReductions(matrix) {
+    const n = matrix.length;
+    const rowReduced = matrix.map(row => row.slice());
+    const colReduced = matrix.map(row => row.slice());
+
+    let rowRedCost = 0;
+    let colRedCost = 0;
+
+    // Row reduction
+    for (let i = 0; i < n; i++) {
+      let minVal = Infinity;
+      for (let j = 0; j < n; j++) {
+        if (rowReduced[i][j] < minVal) minVal = rowReduced[i][j];
+      }
+      if (minVal !== Infinity && minVal > 0) {
+        rowRedCost += minVal;
+        for (let j = 0; j < n; j++) {
+          if (rowReduced[i][j] !== Infinity) {
+            rowReduced[i][j] = rowReduced[i][j] - minVal;
+          }
+        }
+      }
+    }
+
+    // Copy before column reduction
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        colReduced[i][j] = rowReduced[i][j];
+      }
+    }
+
+    // Column reduction
+    for (let j = 0; j < n; j++) {
+      let minVal = Infinity;
+      for (let i = 0; i < n; i++) {
+        if (colReduced[i][j] < minVal) minVal = colReduced[i][j];
+      }
+      if (minVal !== Infinity && minVal > 0) {
+        colRedCost += minVal;
+        for (let i = 0; i < n; i++) {
+          if (colReduced[i][j] !== Infinity) {
+            colReduced[i][j] = colReduced[i][j] - minVal;
+          }
+        }
+      }
+    }
+
+    return {
+      rowReduced,
+      colReduced,
+      rowRedCost,
+      colRedCost,
+      lowerBound: rowRedCost + colRedCost
+    };
+  }
+
+  function renderMatrixHtml(matrix) {
+    const n = matrix.length;
+    let html = '<table class="matrix-table">';
+    html += "<thead><tr><th>i \\ j</th>";
+    for (let j = 0; j < n; j++) {
+      html += `<th>${j + 1}</th>`;  // 1-based
+    }
+    html += "</tr></thead><tbody>";
+
+    for (let i = 0; i < n; i++) {
+      html += `<tr><th>${i + 1}</th>`;  // 1-based
+      for (let j = 0; j < n; j++) {
+        const val = matrix[i][j];
+        const isDiag = i === j;
+        const isInf = !isFinite(val);
+        const cls = [
+          isDiag ? "diagonal" : "",
+          isInf ? "inf" : ""
+        ].join(" ").trim();
+        const display = isInf ? "∞" : (Math.round(val * 100) / 100);
+        html += `<td class="${cls}">${display}</td>`;
+      }
+      html += "</tr>";
+    }
+
+    html += "</tbody></table>";
+    return html;
+  }
+
+  // ----- Branch & Bound TSP (DFS with pruning on bound = g) -----
+  function runBranchAndBound(matrix) {
+    const n = matrix.length;
+    let bestCost = Infinity;
+    let bestPath = [];  // 0-based indices
+    let nodesExplored = 0;
+    let prunedCount = 0;
+
+    const treeNodes = [];
+    let nodeIdCounter = 0;
+
+    const visited = Array(n).fill(false);
+    visited[0] = true;
+
+    function dfs(path, costSoFar, parentId, edgeFromParent) {
+      const last = path[path.length - 1];
+      const bound = costSoFar; // here bound is just g(n)
+
+      const nodeId = nodeIdCounter++;
+      nodesExplored++;
+
+      let nodeType = "active";
+      const displayPath = path.map(x => x + 1).join("→"); // 1-based for visualization
+      let label = `path=${displayPath}, g=${costSoFar}, bound=${bound}`;
+
+      const node = {
+        id: nodeId,
+        parentId,
+        label,
+        type: nodeType,
+        cost: costSoFar,
+        bound: bound,
+        edgeCost: edgeFromParent,
+        pathStr: displayPath
+      };
+
+      // If complete tour, add return to city 1 (index 0)
+      if (path.length === n) {
+        const backCost = matrix[last][path[0]];
+        if (isFinite(backCost)) {
+          const totalCost = costSoFar + backCost;
+          nodeType = "leaf";
+          node.label = `${label}, +return=${backCost} ⇒ ${totalCost}`;
+          node.type = nodeType;
+
+          if (totalCost < bestCost) {
+            bestCost = totalCost;
+            bestPath = [...path, path[0]];
+          }
+        } else {
+          nodeType = "leaf";
+          node.label = `${label}, cannot return to city 1 (∞)`;
+          node.type = nodeType;
+        }
+        treeNodes.push(node);
+        return;
+      }
+
+      // Prune if bound is already worse than best
+      if (bound >= bestCost) {
+        nodeType = "pruned";
+        node.label = `${label}  [pruned: bound ≥ best]`;
+        node.type = nodeType;
+        prunedCount++;
+        treeNodes.push(node);
+        return;
+      }
+
+      // Otherwise keep as active and explore children
+      treeNodes.push(node);
+
+      for (let next = 0; next < n; next++) {
+        if (!visited[next]) {
+          const edgeCost = matrix[last][next];
+          if (!isFinite(edgeCost)) continue; // skip impossible move
+
+          const newCost = costSoFar + edgeCost;
+
+          if (newCost >= bestCost) {
+            prunedCount++;
+            continue;
+          }
+
+          visited[next] = true;
+          path.push(next);
+          dfs(path, newCost, nodeId, edgeCost);
+          path.pop();
+          visited[next] = false;
+        }
+      }
+    }
+
+    dfs([0], 0, null, null);
+
+    if (!bestPath.length) {
+      return {
+        bestCost: Infinity,
+        bestPath: null,
+        nodesExplored,
+        prunedCount,
+        treeNodes
+      };
+    }
+
+    return {
+      bestCost,
+      bestPath,
+      nodesExplored,
+      prunedCount,
+      treeNodes
+    };
+  }
+
+  // ----- D3 Tree Rendering -----
+  function renderTree(nodes) {
+    const svg = d3.select("#treeSvg");
+    svg.selectAll("*").remove();
+
+    if (!nodes || nodes.length === 0) return;
+
+    // Build hierarchy
+    const nodeById = new Map();
+    nodes.forEach(n => {
+      nodeById.set(n.id, { ...n, children: [] });
+    });
+
+    let root = null;
+    nodeById.forEach(n => {
+      if (n.parentId == null) {
+        root = n;
+      } else {
+        const parent = nodeById.get(n.parentId);
+        if (parent) parent.children.push(n);
+      }
+    });
+
+    if (!root) return;
+
+    const width = document.getElementById("treeContainer").clientWidth;
+    const height = document.getElementById("treeContainer").clientHeight;
+
+    svg.attr("width", width).attr("height", height);
+
+    const rootHierarchy = d3.hierarchy(root);
+    const treeLayout = d3.tree().size([height - 40, width - 80]);
+    treeLayout(rootHierarchy);
+
+    // Links + edge labels
+    const linkGroup = svg.append("g")
+      .selectAll("g")
+      .data(rootHierarchy.links())
+      .enter()
+      .append("g");
+
+    linkGroup.append("path")
+      .attr("class", "tree-link")
+      .attr("d", d3.linkHorizontal()
+        .x(d => d.y + 40)
+        .y(d => d.x + 20)
+      )
+      .attr("stroke", d => {
+        const t = d.target.data.type;
+        if (t === "leaf") return "#4ade80";
+        if (t === "pruned") return "#f97373";
+        return "rgba(148,163,184,0.9)";
+      })
+      .attr("stroke-dasharray", d => d.target.data.type === "pruned" ? "4,3" : "0")
+      .attr("opacity", 0.85);
+
+    // Edge cost labels
+    linkGroup.append("text")
+      .attr("class", "tree-edge-label")
+      .attr("text-anchor", "middle")
+      .each(function(d) {
+        const edgeCost = d.target.data.edgeCost;
+        if (!isFinite(edgeCost) || edgeCost == null) return;
+        const midX = (d.source.x + d.target.x) / 2 + 20;
+        const midY = (d.source.y + d.target.y) / 2 + 40;
+        d3.select(this)
+          .attr("x", midY)
+          .attr("y", midX - 4)
+          .text(edgeCost);
+      });
+
+    // Nodes
+    const nodeGroup = svg.append("g")
+      .selectAll("g")
+      .data(rootHierarchy.descendants())
+      .enter()
+      .append("g")
+      .attr("transform", d => `translate(${d.y + 40}, ${d.x + 20})`);
+
+    nodeGroup.append("circle")
+      .attr("r", 8)
+      .attr("class", "tree-node-circle")
+      .attr("fill", d => {
+        const t = d.data.type;
+        if (t === "leaf") return "#22c55e";
+        if (t === "pruned") return "#020617";
+        return "rgba(15,23,42,0.95)";
+      })
+      .attr("stroke", d => {
+        const t = d.data.type;
+        if (t === "leaf") return "#4ade80";
+        if (t === "pruned") return "#f97373";
+        return "#38bdf8";
+      });
+
+    // Node labels (show path, g, bound) with 1-based paths already stored
+    nodeGroup.append("text")
+      .attr("class", "tree-node-label")
+      .attr("dy", -12)
+      .attr("text-anchor", "middle")
+      .each(function(d) {
+        const el = d3.select(this);
+        const pathLine = `path=${d.data.pathStr || ""}`; // already 1-based
+        const gLine = `g=${d.data.cost}`;
+        const bLine = `b=${d.data.bound}`;
+        const lines = [pathLine, gLine, bLine];
+
+        lines.forEach((line, i) => {
+          const shortened = line.length > 40 ? line.slice(0, 38) + "…" : line;
+          el.append("tspan")
+            .attr("x", 0)
+            .attr("dy", i === 0 ? 0 : 11)
+            .text(shortened);
+        });
+      });
+  }
+
+  function clearTree() {
+    const svg = d3.select("#treeSvg");
+    svg.selectAll("*").remove();
+  }
+
+})();
+</script>
+
+</body>
+</html>

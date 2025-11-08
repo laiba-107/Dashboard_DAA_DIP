@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Algorithms Lab — Longest Common Subsequence (LCS)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Anime.js for smooth cell animations -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" defer></script>
+
+  <style>
+    :root {
+      --bg: #020617;
+      --panel: #02091a;
+      --panel-soft: #020b21;
+      --border: #1f2937;
+      --border-soft: #111827;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.1);
+      --accent-2: #a855f7;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --good: #22c55e;
+      --danger: #f97373;
+      --warning: #eab308;
+      --shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.95);
+      --radius-lg: 18px;
+      --radius-xl: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu,
+        "Helvetica Neue", Arial, sans-serif;
+      background: radial-gradient(circle at top, #020617 0, #020617 40%, #020617 100%);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .lcs-shell {
+      width: 100%;
+      max-width: 1200px;
+      background: radial-gradient(circle at top left, #020617 0, #020617 38%, #000 100%);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-soft);
+      padding: 20px 22px 24px;
+    }
+
+    .lcs-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+      border-bottom: 1px solid var(--border-soft);
+      padding-bottom: 12px;
+    }
+
+    .lcs-title-block h1 {
+      font-size: 1.4rem;
+      font-weight: 650;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .algo-pill {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      color: var(--muted);
+      background: rgba(15, 23, 42, 0.7);
+    }
+
+    .lcs-title-block p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .equation-chip {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent);
+      font-size: 0.72rem;
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .equation-chip span {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+      color: var(--accent);
+      font-size: 0.72rem;
+    }
+
+    .lcs-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.7fr);
+      gap: 18px;
+    }
+
+    @media (max-width: 960px) {
+      .lcs-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .panel {
+      background: radial-gradient(circle at top, #02081a 0, #020617 35%, #020617 100%);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      padding: 14px 14px 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.08), transparent 58%);
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .panel-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .panel h2 {
+      margin: 0 0 8px;
+      font-size: 1.02rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .panel h2 span {
+      font-weight: 600;
+    }
+
+    .panel h2 small {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .inputs-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .field-group label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .field-group input[type="text"],
+    .field-group input[type="number"],
+    .field-group select {
+      width: 100%;
+      padding: 7px 9px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: radial-gradient(circle at top, #020617 0, #020617 100%);
+      color: var(--text);
+      font-size: 0.88rem;
+      outline: none;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }
+
+    .field-group input:focus,
+    .field-group select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
+    }
+
+    .field-inline {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 2px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .field-inline input[type="checkbox"] {
+      width: 13px;
+      height: 13px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: #020617;
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin: 10px 0 6px;
+    }
+
+    .btn {
+      border-radius: 999px;
+      padding: 6px 11px;
+      border: 1px solid transparent;
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.18s ease, transform 0.1s ease, box-shadow 0.18s ease,
+        border-color 0.18s ease;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-2), var(--accent));
+      color: #0b1120;
+      font-weight: 600;
+      box-shadow: 0 8px 22px rgba(56, 189, 248, 0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 26px rgba(56, 189, 248, 0.45);
+    }
+
+    .btn-ghost {
+      background: rgba(15, 23, 42, 0.85);
+      color: var(--muted);
+      border-color: var(--border);
+    }
+
+    .btn-ghost:hover {
+      background: rgba(15, 23, 42, 1);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--accent);
+      border-color: rgba(56, 189, 248, 0.7);
+    }
+
+    .btn-outline:hover {
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+      font-size: 0.72rem;
+    }
+
+    .chip {
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(75, 85, 99, 0.7);
+      background: rgba(15, 23, 42, 0.8);
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chip strong {
+      color: var(--accent);
+      font-weight: 600;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+      font-size: 0.7rem;
+    }
+
+    .hint {
+      margin-top: 4px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .hint code {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+      font-size: 0.76rem;
+      background: rgba(15, 23, 42, 0.9);
+      padding: 2px 4px;
+      border-radius: 6px;
+      border: 1px solid rgba(31, 41, 55, 0.9);
+    }
+
+    .result-box {
+      margin-top: 10px;
+      padding: 8px 9px;
+      border-radius: 12px;
+      border: 1px dashed rgba(75, 85, 99, 0.9);
+      background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.08), rgba(15, 23, 42, 0.95));
+      font-size: 0.84rem;
+    }
+
+    .result-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .result-row span.label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+    }
+
+    .result-row span.value {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+      font-size: 0.88rem;
+    }
+
+    .result-row span.ok {
+      color: var(--good);
+    }
+
+    .result-row span.warn {
+      color: var(--warning);
+    }
+
+    .result-row span.bad {
+      color: var(--danger);
+    }
+
+    .lcs-string {
+      font-size: 0.9rem;
+      margin-top: 4px;
+    }
+
+    .lcs-string code {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+      font-size: 0.88rem;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(31, 41, 55, 0.9);
+    }
+
+    .error-msg {
+      margin-top: 6px;
+      font-size: 0.78rem;
+      color: var(--danger);
+    }
+
+    .success-msg {
+      margin-top: 6px;
+      font-size: 0.78rem;
+      color: var(--good);
+    }
+
+    /* DP Table */
+    .dp-wrapper {
+      margin-top: 8px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.96), #020617 60%);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      max-height: 380px;
+    }
+
+    .dp-header {
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--border-soft);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .dp-header strong {
+      font-size: 0.82rem;
+      color: #e5e7eb;
+    }
+
+    .dp-scroll {
+      overflow: auto;
+      padding: 8px;
+    }
+
+    table.dp-table {
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: max(100%, 420px);
+      font-size: 0.78rem;
+    }
+
+    .dp-table th,
+    .dp-table td {
+      border: 1px solid rgba(30, 64, 175, 0.65);
+      padding: 5px 7px;
+      text-align: center;
+      min-width: 32px;
+      position: relative;
+      background: rgba(15, 23, 42, 0.92);
+      color: var(--muted);
+    }
+
+    .dp-table th {
+      background: radial-gradient(circle at top, rgba(15, 23, 42, 0.95), #020617);
+      font-weight: 500;
+      color: #e5e7eb;
+      z-index: 2;
+    }
+
+    .dp-table th.corner {
+      background: rgba(15, 23, 42, 0.9);
+      font-size: 0.74rem;
+      color: var(--muted);
+      min-width: 38px;
+    }
+
+    .dp-table th.axis-label {
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .dp-table td.dp-cell {
+      transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease,
+        box-shadow 0.16s ease, transform 0.12s ease;
+    }
+
+    .dp-table td.dp-cell.zero-cell {
+      opacity: 0.85;
+      font-size: 0.74rem;
+      color: rgba(148, 163, 184, 0.9);
+      background: rgba(15, 23, 42, 0.85);
+    }
+
+    .dp-table td.dp-cell.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: #e5e7eb;
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
+      transform: translateY(-1px);
+      z-index: 3;
+    }
+
+    .dp-table td.dp-cell.source {
+      background: radial-gradient(circle at center, rgba(168, 85, 247, 0.16), rgba(15, 23, 42, 0.9));
+      border-color: rgba(168, 85, 247, 0.7);
+      color: #e5e7eb;
+      z-index: 2;
+    }
+
+    .dp-table td.dp-cell.match-diagonal {
+      background: radial-gradient(circle at center, rgba(34, 197, 94, 0.18), rgba(15, 23, 42, 0.9));
+      border-color: rgba(34, 197, 94, 0.9);
+      color: #e5e7eb;
+    }
+
+    .dp-table td.dp-cell:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.6);
+      z-index: 2;
+    }
+
+    .steps-wrapper {
+      margin-top: 6px;
+      padding: 6px 8px;
+      border-radius: 10px;
+      border: 1px solid rgba(31, 41, 55, 0.95);
+      background: radial-gradient(circle at top right, rgba(15, 23, 42, 0.95), #020617);
+      max-height: 150px;
+      overflow: auto;
+    }
+
+    .steps-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+
+    .steps-header strong {
+      font-size: 0.8rem;
+      color: #e5e7eb;
+    }
+
+    .steps-list {
+      list-style: none;
+      padding-left: 0;
+      margin: 2px 0 0;
+      font-size: 0.78rem;
+    }
+
+    .steps-list li {
+      padding: 3px 0;
+      border-bottom: 1px dashed rgba(31, 41, 55, 0.9);
+    }
+
+    .steps-list li:last-child {
+      border-bottom: none;
+    }
+
+    .steps-list code {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+      font-size: 0.76rem;
+      background: rgba(15, 23, 42, 0.9);
+      padding: 1px 3px;
+      border-radius: 6px;
+      border: 1px solid rgba(31, 41, 55, 0.9);
+    }
+
+    .legend-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+      font-size: 0.72rem;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--muted);
+    }
+
+    .legend-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      border: 1px solid rgba(148, 163, 184, 0.8);
+    }
+
+    .legend-swatch.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+    }
+
+    .legend-swatch.source {
+      background: rgba(168, 85, 247, 0.16);
+      border-color: rgba(168, 85, 247, 0.8);
+    }
+
+    .legend-swatch.match-diagonal {
+      background: rgba(34, 197, 94, 0.18);
+      border-color: rgba(34, 197, 94, 0.9);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(75, 85, 99, 0.9);
+      background: rgba(15, 23, 42, 0.9);
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    .badge strong {
+      color: var(--accent);
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+      font-size: 0.72rem;
+    }
+
+    .formula-note {
+      margin-top: 6px;
+      font-size: 0.76rem;
+      color: var(--muted);
+    }
+
+    .formula-note code {
+      font-family: "JetBrains Mono", ui-monospace;
+      font-size: 0.76rem;
+      background: rgba(15, 23, 42, 0.9);
+      padding: 2px 4px;
+      border-radius: 6px;
+      border: 1px solid rgba(31, 41, 55, 0.9);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="lcs-shell" id="lcs-module">
+    <header class="lcs-header">
+      <div class="lcs-title-block">
+        <h1>
+          Longest Common Subsequence
+          <span class="algo-pill">Dynamic Programming · LCS</span>
+        </h1>
+        <p>Visualize the DP table, follow the recurrence step-by-step, and recover the LCS string.</p>
+      </div>
+      <div class="equation-chip">
+        Recurrence:
+        <span>
+          if A[i] = B[j] ⇒ LCS[i, j] = 1 + LCS[i−1, j−1]<br />
+          else LCS[i, j] = max(LCS[i−1, j], LCS[i, j−1])
+        </span>
+      </div>
+    </header>
+
+    <div class="lcs-grid">
+      <!-- LEFT PANEL: Input & Summary -->
+      <section class="panel">
+        <div class="panel-inner">
+          <h2>
+            <span>Input Sequences</span>
+            <small>Step 1 · Define A and B</small>
+          </h2>
+
+          <div class="inputs-row">
+            <div class="field-group">
+              <label for="seqA">Sequence A</label>
+              <input id="seqA" type="text" placeholder="Example: AGGTAB" />
+            </div>
+            <div class="field-group">
+              <label for="seqB">Sequence B</label>
+              <input id="seqB" type="text" placeholder="Example: GXTXAYB" />
+            </div>
+          </div>
+
+          <div class="field-group">
+            <div class="field-inline">
+              <input type="checkbox" id="caseSensitive" />
+              <label for="caseSensitive">Case sensitive (A ≠ a)</label>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-primary" id="runLcsBtn">
+              ▶ Run LCS
+            </button>
+            <button class="btn btn-outline" id="stepBtn" title="Highlight the next DP update step">
+              ➤ Next Step
+            </button>
+            <button class="btn btn-ghost" id="resetBtn">
+              ⟲ Reset
+            </button>
+          </div>
+
+          <p class="hint">
+            Hint: LCS works for any characters — <code>ABCDEF</code>, <code>0101</code>, or even full words
+            like <code>dynamic</code>.
+          </p>
+
+          <div class="chip-row">
+            <div class="chip">
+              Time <strong>O(m·n)</strong>
+            </div>
+            <div class="chip">
+              Space <strong>O(m·n)</strong>
+            </div>
+          </div>
+
+          <div class="result-box" id="resultBox">
+            <div class="result-row">
+              <span class="label">Status</span>
+              <span class="value warn" id="statusText">Waiting for input…</span>
+            </div>
+            <div class="result-row">
+              <span class="label">LCS Length</span>
+              <span class="value" id="lcsLength">–</span>
+            </div>
+            <div class="lcs-string">
+              LCS:
+              <code id="lcsString">–</code>
+            </div>
+          </div>
+
+          <div id="messageBox"></div>
+
+          <div class="formula-note">
+            We fill the DP table row by row. For each cell
+            <code>LCS[i, j]</code> we apply exactly one of:
+            <br />
+            <code>1 + LCS[i−1, j−1]</code> (characters match) or
+            <code>max(LCS[i−1, j], LCS[i, j−1])</code> (carry best prefix so far).
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT PANEL: DP Table & Steps -->
+      <section class="panel">
+        <div class="panel-inner">
+          <h2>
+            <span>DP Table & Steps</span>
+            <small>Step 2 · Follow the recurrence</small>
+          </h2>
+
+          <div class="dp-wrapper">
+            <div class="dp-header">
+              <div>
+                <strong>Dynamic Programming Table LCS[i, j]</strong>
+                <span id="dpSizeLabel"></span>
+              </div>
+              <div class="badge">
+                Fill order: <strong>i = 1…m, j = 1…n</strong>
+              </div>
+            </div>
+            <div class="dp-scroll" id="dpContainer">
+              <!-- DP table will be injected here -->
+            </div>
+          </div>
+
+          <div class="legend-row">
+            <div class="legend-item">
+              <div class="legend-swatch active"></div>
+              <span>Current cell LCS[i, j]</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-swatch source"></div>
+              <span>Source from recurrence</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-swatch match-diagonal"></div>
+              <span>Match path (diagonal)</span>
+            </div>
+          </div>
+
+          <div class="steps-wrapper">
+            <div class="steps-header">
+              <strong>Step-by-step Recurrence</strong>
+              <span id="stepCounter">0 / 0</span>
+            </div>
+            <ul class="steps-list" id="stepsList">
+              <!-- Steps log -->
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const seqAInput = document.getElementById("seqA");
+      const seqBInput = document.getElementById("seqB");
+      const caseCheckbox = document.getElementById("caseSensitive");
+      const runBtn = document.getElementById("runLcsBtn");
+      const stepBtn = document.getElementById("stepBtn");
+      const resetBtn = document.getElementById("resetBtn");
+
+      const statusText = document.getElementById("statusText");
+      const lcsLengthSpan = document.getElementById("lcsLength");
+      const lcsStringSpan = document.getElementById("lcsString");
+      const dpContainer = document.getElementById("dpContainer");
+      const dpSizeLabel = document.getElementById("dpSizeLabel");
+      const messageBox = document.getElementById("messageBox");
+      const stepsList = document.getElementById("stepsList");
+      const stepCounter = document.getElementById("stepCounter");
+
+      let steps = [];
+      let currentStepIndex = -1;
+      let dp = [];
+      let seqA = "";
+      let seqB = "";
+
+      function showMessage(msg, type = "error") {
+        messageBox.innerHTML = "";
+        const div = document.createElement("div");
+        div.className = type === "error" ? "error-msg" : "success-msg";
+        div.textContent = msg;
+        messageBox.appendChild(div);
+      }
+
+      function clearMessage() {
+        messageBox.innerHTML = "";
+      }
+
+      function computeLCSWithSteps(a, b) {
+        const m = a.length;
+        const n = b.length;
+        const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+        const steps = [];
+
+        for (let i = 1; i <= m; i++) {
+          for (let j = 1; j <= n; j++) {
+            if (a[i - 1] === b[j - 1]) {
+              dp[i][j] = dp[i - 1][j - 1] + 1;
+              steps.push({
+                i,
+                j,
+                type: "match",
+                char: a[i - 1],
+                value: dp[i][j],
+                from: [{ i: i - 1, j: j - 1 }],
+              });
+            } else {
+              const up = dp[i - 1][j];
+              const left = dp[i][j - 1];
+              if (up >= left) {
+                dp[i][j] = up;
+                steps.push({
+                  i,
+                  j,
+                  type: "up",
+                  value: dp[i][j],
+                  from: [{ i: i - 1, j }],
+                });
+              } else {
+                dp[i][j] = left;
+                steps.push({
+                  i,
+                  j,
+                  type: "left",
+                  value: dp[i][j],
+                  from: [{ i, j: j - 1 }],
+                });
+              }
+            }
+          }
+        }
+        return { dp, steps };
+      }
+
+      function reconstructLCS(a, b, dp) {
+        let i = a.length;
+        let j = b.length;
+        const chars = [];
+
+        while (i > 0 && j > 0) {
+          if (a[i - 1] === b[j - 1]) {
+            chars.push(a[i - 1]);
+            i--;
+            j--;
+          } else if (dp[i - 1][j] >= dp[i][j - 1]) {
+            i--;
+          } else {
+            j--;
+          }
+        }
+        return chars.reverse().join("");
+      }
+
+      function renderTable(dp, a, b) {
+        const m = a.length;
+        const n = b.length;
+        const table = document.createElement("table");
+        table.className = "dp-table";
+
+        const thead = document.createElement("thead");
+        const headRow = document.createElement("tr");
+
+        // Corner cell
+        const cornerTh = document.createElement("th");
+        cornerTh.className = "corner";
+        cornerTh.innerHTML = "i / j";
+        headRow.appendChild(cornerTh);
+
+        // Empty symbol header
+        const emptyHeader = document.createElement("th");
+        emptyHeader.className = "axis-label";
+        emptyHeader.textContent = "Ø";
+        headRow.appendChild(emptyHeader);
+
+        for (let j = 0; j < n; j++) {
+          const th = document.createElement("th");
+          th.className = "axis-label";
+          th.textContent = b[j];
+          headRow.appendChild(th);
+        }
+        thead.appendChild(headRow);
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+
+        for (let i = 0; i <= m; i++) {
+          const row = document.createElement("tr");
+
+          // Left header: symbol or Ø
+          const rowHeader = document.createElement("th");
+          rowHeader.className = "axis-label";
+          rowHeader.textContent = i === 0 ? "Ø" : a[i - 1];
+          row.appendChild(rowHeader);
+
+          for (let j = 0; j <= n; j++) {
+            const cell = document.createElement("td");
+            cell.className = "dp-cell";
+            cell.dataset.i = i.toString();
+            cell.dataset.j = j.toString();
+
+            if (i === 0 || j === 0) {
+              cell.classList.add("zero-cell");
+            }
+
+            cell.textContent = dp[i][j];
+            row.appendChild(cell);
+          }
+
+          tbody.appendChild(row);
+        }
+
+        table.appendChild(tbody);
+        dpContainer.innerHTML = "";
+        dpContainer.appendChild(table);
+
+        dpSizeLabel.textContent = `· Size: (m+1)×(n+1) = ${m + 1} × ${n + 1}`;
+      }
+
+      function clearHighlights() {
+        const cells = dpContainer.querySelectorAll(".dp-cell");
+        cells.forEach((cell) => {
+          cell.classList.remove("active", "source", "match-diagonal");
+        });
+      }
+
+      function animateCell(cell) {
+        if (!cell || typeof anime === "undefined") return;
+        anime({
+          targets: cell,
+          scale: [0.9, 1],
+          duration: 350,
+          easing: "easeOutQuad",
+        });
+      }
+
+      function appendStepDescription(step, index) {
+        const li = document.createElement("li");
+        const { i, j, type, value, char, from } = step;
+
+        let text = `Step ${index + 1}: LCS[${i}, ${j}] = `;
+
+        if (type === "match") {
+          text += `1 + LCS[${i - 1}, ${j - 1}] = ${value} (because A[${i}] = B[${j}] = '${char}')`;
+        } else if (type === "up") {
+          text += `max(LCS[${i - 1}, ${j}], LCS[${i}, ${j - 1}]) = LCS[${i - 1}, ${j}] = ${value} (take top cell)`;
+        } else if (type === "left") {
+          text += `max(LCS[${i - 1}, ${j}], LCS[${i}, ${j - 1}]) = LCS[${i}, ${j - 1}] = ${value} (take left cell)`;
+        }
+
+        li.innerHTML = `<code>${text}</code>`;
+        stepsList.appendChild(li);
+        stepsList.scrollTop = stepsList.scrollHeight;
+      }
+
+      function applyStep(stepIndex) {
+        if (!steps || steps.length === 0) return;
+        if (stepIndex < 0 || stepIndex >= steps.length) return;
+
+        const step = steps[stepIndex];
+        clearHighlights();
+
+        const cell = dpContainer.querySelector(
+          `.dp-cell[data-i="${step.i}"][data-j="${step.j}"]`
+        );
+        if (cell) {
+          cell.classList.add("active");
+          animateCell(cell);
+        }
+
+        if (step.from) {
+          step.from.forEach((src) => {
+            const srcCell = dpContainer.querySelector(
+              `.dp-cell[data-i="${src.i}"][data-j="${src.j}"]`
+            );
+            if (srcCell) {
+              srcCell.classList.add("source");
+            }
+          });
+        }
+
+        if (step.type === "match") {
+          const diagCell = dpContainer.querySelector(
+            `.dp-cell[data-i="${step.i - 1}"][data-j="${step.j - 1}"]`
+          );
+          if (diagCell) {
+            diagCell.classList.add("match-diagonal");
+          }
+        }
+
+        stepCounter.textContent = `${stepIndex + 1} / ${steps.length}`;
+      }
+
+      function resetStepsView() {
+        stepsList.innerHTML = "";
+        stepCounter.textContent = "0 / 0";
+        clearHighlights();
+      }
+
+      function resetAll() {
+        seqAInput.value = "";
+        seqBInput.value = "";
+        caseCheckbox.checked = false;
+        statusText.textContent = "Waiting for input…";
+        statusText.className = "value warn";
+        lcsLengthSpan.textContent = "–";
+        lcsStringSpan.textContent = "–";
+        dpContainer.innerHTML = "";
+        dpSizeLabel.textContent = "";
+        resetStepsView();
+        clearMessage();
+        steps = [];
+        currentStepIndex = -1;
+        dp = [];
+      }
+
+      function runLCS() {
+        clearMessage();
+        resetStepsView();
+
+        let a = seqAInput.value.trim();
+        let b = seqBInput.value.trim();
+
+        if (!caseCheckbox.checked) {
+          a = a.toUpperCase();
+          b = b.toUpperCase();
+        }
+
+        if (a.length === 0 || b.length === 0) {
+          showMessage("Please enter both Sequence A and Sequence B.", "error");
+          statusText.textContent = "Missing input";
+          statusText.className = "value bad";
+          lcsLengthSpan.textContent = "–";
+          lcsStringSpan.textContent = "–";
+          dpContainer.innerHTML = "";
+          dpSizeLabel.textContent = "";
+          return;
+        }
+
+        if (a.length > 30 || b.length > 30) {
+          showMessage(
+            "Warning: Long sequences may produce a large table. Visualization still works but may require scrolling.",
+            "success"
+          );
+        }
+
+        seqA = a;
+        seqB = b;
+
+        const result = computeLCSWithSteps(a, b);
+        dp = result.dp;
+        steps = result.steps;
+
+        renderTable(dp, a, b);
+
+        const lcsStr = reconstructLCS(a, b, dp);
+        const length = lcsStr.length;
+
+        lcsLengthSpan.textContent = length.toString();
+        lcsStringSpan.textContent = lcsStr.length > 0 ? lcsStr : "∅ (no common subsequence)";
+
+        if (length === 0) {
+          statusText.textContent = "No common subsequence found.";
+          statusText.className = "value bad";
+        } else {
+          statusText.textContent = "LCS computed successfully.";
+          statusText.className = "value ok";
+          statusText.classList.add("ok");
+        }
+
+        stepCounter.textContent = `0 / ${steps.length}`;
+        currentStepIndex = -1;
+      }
+
+      runBtn.addEventListener("click", runLCS);
+
+      stepBtn.addEventListener("click", () => {
+        if (!steps || steps.length === 0) {
+          showMessage("Run the LCS algorithm first to generate the DP steps.", "error");
+          return;
+        }
+
+        currentStepIndex++;
+        if (currentStepIndex >= steps.length) {
+          currentStepIndex = 0;
+          resetStepsView();
+        }
+
+        applyStep(currentStepIndex);
+        appendStepDescription(steps[currentStepIndex], currentStepIndex);
+      });
+
+      resetBtn.addEventListener("click", resetAll);
+    });
+  </script>
+</body>
+</html>
