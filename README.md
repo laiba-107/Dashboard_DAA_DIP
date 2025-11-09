@@ -101,3 +101,6 @@ All of these are accessible from the **Filters** tab in the main dashboard.
     ├── median.html
     ├── spatial_filter.html
     └── weighted_average_filter.html
+
+Reference:
+ChatGPT 5
