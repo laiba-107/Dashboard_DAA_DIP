@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>PSO — Task Scheduling (Load Balancing)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#020617;
+      --panel:#0b1220;
+      --panel-2:#020617;
+      --border:#1f2937;
+      --text:#e5e7eb;
+      --muted:#9ca3af;
+      --accent:#38bdf8;
+      --accent-2:#60a5fa;
+      --good:#22c55e;
+      --bad:#f97373;
+      --warning:#eab308;
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      background:radial-gradient(circle at top,#0f172a 0,#020617 55%);
+      color:var(--text);
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;
+      min-height:100vh;
+    }
+    .page{
+      max-width:1200px;
+      margin:0 auto;
+      padding:24px 16px 40px;
+    }
+    h1,h2,h3{
+      margin:0;
+      font-weight:600;
+    }
+    h1{
+      font-size:1.8rem;
+      letter-spacing:.02em;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    h1 span.logo-dot{
+      width:10px;
+      height:10px;
+      border-radius:999px;
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      box-shadow:0 0 12px rgba(56,189,248,.8);
+    }
+    .subtitle{
+      margin-top:6px;
+      color:var(--muted);
+      font-size:.9rem;
+      max-width:750px;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns:1.05fr 1.1fr;
+      gap:18px;
+      margin-top:18px;
+    }
+    @media(max-width:960px){
+      .grid{grid-template-columns:1fr;}
+    }
+    .card{
+      background:radial-gradient(circle at top left,#111827 0,var(--panel) 60%);
+      border-radius:18px;
+      border:1px solid var(--border);
+      padding:16px 18px 18px;
+      box-shadow:0 18px 45px rgba(15,23,42,.7);
+    }
+    .card-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:10px;
+      margin-bottom:8px;
+    }
+    .card-title{
+      font-size:1rem;
+      font-weight:600;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .card-title-pill{
+      font-size:.7rem;
+      text-transform:uppercase;
+      letter-spacing:.09em;
+      color:var(--muted);
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.4);
+      background:rgba(15,23,42,.7);
+    }
+    .card-body{
+      font-size:.9rem;
+      color:var(--muted);
+    }
+    label{
+      font-size:.78rem;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+      display:block;
+      margin-bottom:4px;
+    }
+    input,select,textarea{
+      width:100%;
+      background:#020617;
+      border-radius:10px;
+      border:1px solid var(--border);
+      padding:7px 9px;
+      color:var(--text);
+      font-size:.9rem;
+      outline:none;
+      transition:border .18s ease,box-shadow .18s ease,background .18s ease;
+    }
+    input:focus,select:focus,textarea:focus{
+      border-color:var(--accent);
+      box-shadow:0 0 0 1px rgba(56,189,248,.4);
+      background:#020617;
+    }
+    textarea{resize:vertical;min-height:60px;max-height:120px;}
+    .two-col{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:10px;
+    }
+    .btn-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:10px;
+      margin-bottom:4px;
+    }
+    button{
+      border:none;
+      border-radius:999px;
+      padding:7px 14px;
+      font-size:.82rem;
+      font-weight:500;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      transition:background .18s ease,transform .05s ease,box-shadow .18s ease,opacity .18s ease;
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      color:#0b1120;
+      box-shadow:0 8px 26px rgba(56,189,248,.4);
+    }
+    button.secondary{
+      background:rgba(15,23,42,.9);
+      color:var(--text);
+      border:1px solid var(--border);
+      box-shadow:none;
+    }
+    button.ghost{
+      background:transparent;
+      border:1px dashed rgba(148,163,184,.7);
+      color:var(--muted);
+      box-shadow:none;
+    }
+    button:active{
+      transform:translateY(1px) scale(.99);
+      box-shadow:none;
+    }
+    button:disabled{
+      opacity:.4;
+      cursor:not-allowed;
+      box-shadow:none;
+    }
+    .pill-metric{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      font-size:.75rem;
+      padding:4px 10px;
+      border-radius:999px;
+      background:rgba(15,23,42,.9);
+      border:1px solid rgba(148,163,184,.4);
+      color:var(--muted);
+    }
+    .pill-metric strong{color:var(--text);}
+    .metrics-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:8px;
+      margin-bottom:4px;
+    }
+    .chart-container{
+      margin-top:8px;
+      background:var(--panel-2);
+      border-radius:14px;
+      padding:10px;
+      border:1px solid rgba(15,23,42,.8);
+    }
+    canvas{max-height:260px;}
+    .table-wrapper{
+      margin-top:10px;
+      border-radius:12px;
+      overflow:hidden;
+      border:1px solid var(--border);
+      background:linear-gradient(to bottom,#020617,#020617);
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:.82rem;
+    }
+    th,td{
+      padding:7px 8px;
+      border-bottom:1px solid #111827;
+      text-align:left;
+      white-space:nowrap;
+    }
+    th{
+      background:#020617;
+      font-weight:500;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.07em;
+      font-size:.72rem;
+    }
+    tr:nth-child(even){background:#020617;}
+    tr:nth-child(odd){background:#020617;}
+    tr.highlight{background:rgba(34,197,94,.12);}
+    .tag{
+      display:inline-flex;
+      padding:2px 8px;
+      border-radius:999px;
+      font-size:.7rem;
+      background:rgba(15,23,42,1);
+      border:1px solid rgba(148,163,184,.4);
+      color:var(--muted);
+    }
+    .tag.good{border-color:var(--good);color:var(--good);}
+    .tag.warn{border-color:var(--warning);color:var(--warning);}
+    .gantt{
+      margin-top:12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:radial-gradient(circle at top,var(--panel) 0,#020617 70%);
+      padding:8px 10px 10px;
+      font-size:.78rem;
+    }
+    .gantt-row{
+      display:flex;
+      align-items:center;
+      margin-bottom:5px;
+      gap:6px;
+    }
+    .gantt-label{
+      width:72px;
+      color:var(--muted);
+      font-size:.75rem;
+      text-align:right;
+      padding-right:4px;
+    }
+    .gantt-track{
+      flex:1;
+      display:flex;
+      gap:2px;
+      background:#020617;
+      border-radius:999px;
+      padding:3px;
+      border:1px solid #111827;
+      overflow:hidden;
+    }
+    .gantt-task{
+      height:16px;
+      border-radius:999px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:.65rem;
+      color:#0b1120;
+      font-weight:600;
+      min-width:18px;
+      white-space:nowrap;
+      padding:0 4px;
+    }
+    .gantt-legend{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      margin-top:6px;
+      color:var(--muted);
+      font-size:.75rem;
+    }
+    .legend-dot{
+      width:10px;
+      height:10px;
+      border-radius:999px;
+    }
+    .note{
+      font-size:.78rem;
+      color:var(--muted);
+      margin-top:6px;
+    }
+    .small-heading{
+      font-size:.8rem;
+      text-transform:uppercase;
+      letter-spacing:.09em;
+      color:var(--muted);
+      margin-top:4px;
+      margin-bottom:4px;
+    }
+    .ps-list{
+      margin:0;
+      padding-left:16px;
+      font-size:.85rem;
+      color:var(--muted);
+    }
+    .ps-list li{margin-bottom:4px;}
+    .code-inline{
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+      background:#020617;
+      padding:1px 4px;
+      border-radius:5px;
+      border:1px solid #111827;
+      font-size:.8rem;
+      color:#e5e7eb;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <header>
+    <h1><span class="logo-dot"></span>Particle Swarm Optimization — Task Scheduling</h1>
+    <p class="subtitle">
+      Assign <strong>N</strong> independent tasks to <strong>M</strong> machines so that the
+      <strong>makespan</strong> (maximum completion time over all machines) is minimized.
+      Each particle in PSO encodes a complete assignment of tasks to machines.
+    </p>
+  </header>
+
+  <div class="grid">
+
+    <!-- LEFT: Description + Inputs -->
+    <section class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <span>Problem & Algorithm Overview</span>
+        </div>
+        <span class="card-title-pill">Metaheuristic · PSO</span>
+      </div>
+      <div class="card-body">
+        <div class="small-heading">Optimization Problem</div>
+        <p>
+          We have <strong>N tasks</strong>, each with a processing time
+          \( p_i \), and <strong>M identical machines</strong>.
+          An assignment chooses a machine index
+          \( m_i \in \{0,\dots,M-1\} \) for every task \( i \).
+        </p>
+        <p>
+          The load of machine \( k \) is
+          \( L_k = \sum_{i : m_i = k} p_i \).
+          The <strong>makespan</strong> is
+          \( C_{\max} = \max_k L_k \).
+          Our goal is to <strong>minimize</strong> \( C_{\max} \).
+        </p>
+
+        <div class="small-heading">Particle Swarm Optimization (PSO)</div>
+        <ul class="ps-list">
+          <li>Each particle has a <strong>position</strong> vector
+            <span class="code-inline">x = [x₁,…,xₙ]</span> in continuous space.
+            We map it to a discrete assignment by
+            <span class="code-inline">machine = floor(xᵢ)</span>.</li>
+          <li>Velocity <span class="code-inline">v</span> is updated using:
+            <br>
+            <span class="code-inline">
+              v = w·v + c1·r1·(pBest − x) + c2·r2·(gBest − x)
+            </span>
+          </li>
+          <li>Position is updated as <span class="code-inline">x = x + v</span>
+            and clamped to the range <span class="code-inline">[0, M−ε]</span>.
+          </li>
+          <li><strong>Fitness</strong> of a particle = makespan of its assignment.
+            PSO iteratively improves particles toward lower makespan.</li>
+        </ul>
+
+        <hr style="border:none;border-top:1px solid #1f2937;margin:10px 0 12px;">
+
+        <div class="small-heading">Experiment Setup</div>
+
+        <div class="two-col">
+          <div>
+            <label for="numTasks">Number of tasks (N)</label>
+            <input id="numTasks" type="number" min="1" max="40" value="10">
+          </div>
+          <div>
+            <label for="numMachines">Number of machines (M)</label>
+            <input id="numMachines" type="number" min="2" max="10" value="3">
+          </div>
+        </div>
+
+        <div style="margin-top:8px;">
+          <label for="taskDurations">Task processing times (comma-separated)</label>
+          <textarea id="taskDurations"
+            placeholder="Example: 4, 6, 3, 8, 2, 5, 7">
+4, 6, 3, 8, 2, 5, 7, 9, 4, 6</textarea>
+          <p class="note">
+            If the number of values does not match N, the list will be trimmed or
+            extended by random integers between 2 and 15.
+          </p>
+        </div>
+
+        <div class="two-col" style="margin-top:6px;">
+          <div>
+            <label>Swarm size</label>
+            <input id="swarmSize" type="number" min="5" max="200" value="40">
+          </div>
+          <div>
+            <label>Iterations</label>
+            <input id="iterations" type="number" min="5" max="500" value="80">
+          </div>
+        </div>
+
+        <div class="two-col" style="margin-top:6px;">
+          <div>
+            <label>Inertia weight (w)</label>
+            <input id="inertia" type="number" step="0.05" value="0.7">
+          </div>
+          <div>
+            <label>Cognitive &amp; social (c1 = c2)</label>
+            <input id="coeff" type="number" step="0.1" value="1.6">
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button id="btnRandomTasks" class="ghost">
+            🎲 Random tasks
+          </button>
+          <button id="btnRun">
+            ▶ Run PSO Scheduling
+          </button>
+          <button id="btnStep" class="secondary">
+            ➤ Step 1 iteration
+          </button>
+        </div>
+
+        <div class="metrics-row">
+          <div class="pill-metric">
+            Best makespan:
+            <strong id="bestMakespanLabel">—</strong>
+          </div>
+          <div class="pill-metric">
+            Iteration:
+            <strong id="iterationLabel">—</strong>
+          </div>
+          <div class="pill-metric">
+            Machines:
+            <strong id="machinesLabel">—</strong>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- RIGHT: Visualizations & Results -->
+    <section class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <span>Visualization · Loads & Convergence</span>
+        </div>
+        <span class="card-title-pill">Interactive · Dashboard-Ready</span>
+      </div>
+      <div class="card-body">
+
+        <div class="small-heading">1. Machine Loads for Best Found Schedule</div>
+        <div class="chart-container">
+          <canvas id="loadChart"></canvas>
+        </div>
+
+        <div class="gantt" id="ganttRoot">
+          <!-- Gantt rows injected by JS -->
+        </div>
+
+        <div class="small-heading" style="margin-top:10px;">2. Convergence of Best Makespan</div>
+        <div class="chart-container">
+          <canvas id="convergenceChart"></canvas>
+        </div>
+
+        <div class="small-heading" style="margin-top:10px;">3. Best Assignment Table</div>
+        <div class="table-wrapper">
+          <table id="assignmentTable">
+            <thead>
+            <tr>
+              <th>Task</th>
+              <th>Processing Time</th>
+              <th>Assigned Machine</th>
+              <th>Machine Load After Task</th>
+            </tr>
+            </thead>
+            <tbody>
+            <!-- filled by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <p class="note">
+          The PSO search is stochastic. Run it multiple times or adjust parameters
+          (swarm size, iterations, inertia, c1/c2) to explore different schedules
+          and convergence behaviors.
+        </p>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+/* ===================== Utility Functions ====================== */
+function parseTaskDurations(n, rawText){
+  const nums = rawText.split(/[,;\s]+/)
+    .map(x => parseInt(x.trim(),10))
+    .filter(x => !isNaN(x) && x>0);
+  const result = [];
+  const MIN=2, MAX=15;
+  for(let i=0;i<n;i++){
+    if(i<nums.length){
+      result.push(nums[i]);
+    }else{
+      result.push(Math.floor(Math.random()*(MAX-MIN+1))+MIN);
+    }
+  }
+  return result.slice(0,n);
+}
+
+/* compute loads per machine given assignment */
+function computeLoads(assign, times, m){
+  const loads = new Array(m).fill(0);
+  for(let i=0;i<assign.length;i++){
+    const machine = assign[i];
+    loads[machine]+=times[i];
+  }
+  return loads;
+}
+function makespan(assign, times, m){
+  const loads = computeLoads(assign,times,m);
+  return Math.max(...loads);
+}
+/* assignment from continuous position vector */
+function assignmentFromPosition(pos, m){
+  const ass = new Array(pos.length);
+  for(let i=0;i<pos.length;i++){
+    let v = Math.floor(pos[i]);
+    if(v<0) v=0;
+    if(v>=m) v=m-1;
+    ass[i]=v;
+  }
+  return ass;
+}
+
+/* nice colors for tasks */
+function taskColor(idx,total){
+  const hue = (idx/Math.max(1,total))*300;
+  return `hsl(${hue}, 75%, 60%)`;
+}
+
+/* ======================== PSO Core =========================== */
+class PSO{
+  constructor(taskTimes, numMachines, options){
+    this.times = taskTimes;
+    this.m = numMachines;
+    this.n = taskTimes.length;
+
+    this.swarmSize = options.swarmSize ?? 40;
+    this.w = options.w ?? 0.7;
+    this.c1 = options.c1 ?? 1.6;
+    this.c2 = options.c2 ?? 1.6;
+
+    this.positions = [];
+    this.velocities = [];
+    this.pBestPos = [];
+    this.pBestFitness = [];
+
+    this.gBestPos = null;
+    this.gBestFitness = Infinity;
+
+    this.iteration = 0;
+    this.history = []; // best makespan per iteration
+
+    this.initSwarm();
+  }
+
+  initSwarm(){
+    this.positions.length = 0;
+    this.velocities.length = 0;
+    this.pBestPos.length = 0;
+    this.pBestFitness.length = 0;
+    this.gBestPos = null;
+    this.gBestFitness = Infinity;
+    this.iteration = 0;
+    this.history = [];
+
+    for(let s=0;s<this.swarmSize;s++){
+      const pos = [];
+      const vel = [];
+      for(let i=0;i<this.n;i++){
+        const val = Math.random()*this.m;
+        pos.push(val);
+        vel.push((Math.random()-0.5)*2);
+      }
+      this.positions.push(pos);
+      this.velocities.push(vel);
+
+      const assign = assignmentFromPosition(pos,this.m);
+      const fit = makespan(assign,this.times,this.m);
+      this.pBestPos.push([...pos]);
+      this.pBestFitness.push(fit);
+
+      if(fit<this.gBestFitness){
+        this.gBestFitness = fit;
+        this.gBestPos = [...pos];
+      }
+    }
+    this.history.push(this.gBestFitness);
+  }
+
+  step(){
+    const n=this.n, m=this.m;
+    for(let s=0;s<this.swarmSize;s++){
+      const pos = this.positions[s];
+      const vel = this.velocities[s];
+
+      for(let i=0;i<n;i++){
+        const r1=Math.random();
+        const r2=Math.random();
+        vel[i] = this.w*vel[i]
+          + this.c1*r1*(this.pBestPos[s][i]-pos[i])
+          + this.c2*r2*(this.gBestPos[i]-pos[i]);
+        pos[i]+=vel[i];
+
+        if(pos[i]<0) pos[i]=0;
+        if(pos[i]>=m) pos[i]=m-1e-3;
+      }
+
+      const assign = assignmentFromPosition(pos,m);
+      const fit = makespan(assign,this.times,m);
+
+      if(fit<this.pBestFitness[s]){
+        this.pBestFitness[s]=fit;
+        this.pBestPos[s]=[...pos];
+      }
+      if(fit<this.gBestFitness){
+        this.gBestFitness=fit;
+        this.gBestPos=[...pos];
+      }
+    }
+    this.iteration++;
+    this.history.push(this.gBestFitness);
+  }
+
+  bestAssignment(){
+    if(!this.gBestPos) return null;
+    return assignmentFromPosition(this.gBestPos,this.m);
+  }
+}
+
+/* ====================== Charts Setup ========================= */
+let loadChart, convergenceChart;
+function initCharts(numMachines){
+  const loadCtx=document.getElementById('loadChart');
+  const convCtx=document.getElementById('convergenceChart');
+
+  if(loadChart) loadChart.destroy();
+  if(convergenceChart) convergenceChart.destroy();
+
+  loadChart = new Chart(loadCtx,{
+    type:'bar',
+    data:{
+      labels:Array.from({length:numMachines},(_,i)=>`Machine ${i}`),
+      datasets:[{
+        label:'Machine load',
+        data:Array(numMachines).fill(0)
+      }]
+    },
+    options:{
+      responsive:true,
+      scales:{
+        x:{grid:{display:false}},
+        y:{title:{display:true,text:'Total processing time'},
+           beginAtZero:true}
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{enabled:true}
+      }
+    }
+  });
+
+  convergenceChart = new Chart(convCtx,{
+    type:'line',
+    data:{
+      labels:[],
+      datasets:[{
+        label:'Best makespan',
+        data:[],
+        tension:0.2,
+        pointRadius:2
+      }]
+    },
+    options:{
+      responsive:true,
+      scales:{
+        x:{title:{display:true,text:'Iteration'}},
+        y:{title:{display:true,text:'Makespan'},beginAtZero:true}
+      },
+      plugins:{
+        legend:{display:false}
+      }
+    }
+  });
+}
+
+function updateCharts(pso){
+  const ass = pso.bestAssignment();
+  if(!ass) return;
+  const loads = computeLoads(ass,pso.times,pso.m);
+
+  // update load chart
+  loadChart.data.labels = Array.from({length:pso.m},(_,i)=>`Machine ${i}`);
+  loadChart.data.datasets[0].data = loads;
+  loadChart.update('none');
+
+  // update convergence chart
+  convergenceChart.data.labels = pso.history.map((_,i)=>i);
+  convergenceChart.data.datasets[0].data = pso.history;
+  convergenceChart.update('none');
+}
+
+/* ===================== Gantt Visualization ==================== */
+function renderGantt(pso){
+  const ass = pso.bestAssignment();
+  if(!ass) return;
+  const m = pso.m;
+  const times = pso.times;
+  const ganttRoot=document.getElementById('ganttRoot');
+  ganttRoot.innerHTML='';
+
+  const loads = computeLoads(ass,times,m);
+  const maxLoad = Math.max(...loads) || 1;
+
+  for(let machine=0;machine<machine+0;machine++){} // safety noop
+
+  const taskIdsByMachine = Array.from({length:m},()=>[]);
+  for(let i=0;i<ass.length;i++){
+    taskIdsByMachine[ass[i]].push(i);
+  }
+
+  taskIdsByMachine.forEach((taskIds, machine)=>{
+    const row=document.createElement('div');
+    row.className='gantt-row';
+
+    const label=document.createElement('div');
+    label.className='gantt-label';
+    label.textContent=`Machine ${machine}`;
+    row.appendChild(label);
+
+    const track=document.createElement('div');
+    track.className='gantt-track';
+
+    let acc=0;
+    taskIds.forEach((taskIdx,localIndex)=>{
+      const t = times[taskIdx];
+      const widthPercent = (t/maxLoad)*100; // relative to max load
+      const taskDiv=document.createElement('div');
+      taskDiv.className='gantt-task';
+      taskDiv.style.background=taskColor(taskIdx,times.length);
+      taskDiv.style.flexBasis=`${widthPercent}%`;
+      taskDiv.style.flexGrow = t;
+      taskDiv.textContent = `T${taskIdx} (${t})`;
+      track.appendChild(taskDiv);
+      acc+=t;
+    });
+
+    row.appendChild(track);
+    ganttRoot.appendChild(row);
+  });
+
+  // Legend
+  const legend=document.createElement('div');
+  legend.className='gantt-legend';
+  legend.innerHTML='<span style="opacity:.8;">Task legend:</span>';
+  pso.times.forEach((t,i)=>{
+    const item=document.createElement('div');
+    item.style.display='inline-flex';
+    item.style.alignItems='center';
+    item.style.gap='4px';
+    const dot=document.createElement('div');
+    dot.className='legend-dot';
+    dot.style.background=taskColor(i,pso.times.length);
+    const text=document.createElement('span');
+    text.textContent=`T${i}=${t}`;
+    item.appendChild(dot);
+    item.appendChild(text);
+    legend.appendChild(item);
+  });
+  ganttRoot.appendChild(legend);
+}
+
+/* ====================== Table Rendering ======================= */
+function renderAssignmentTable(pso){
+  const ass = pso.bestAssignment();
+  if(!ass) return;
+  const tbody=document.querySelector('#assignmentTable tbody');
+  tbody.innerHTML='';
+
+  const m=pso.m;
+  const times=pso.times;
+  const runningLoads=new Array(m).fill(0);
+
+  for(let i=0;i<ass.length;i++){
+    const tr=document.createElement('tr');
+    const tdTask=document.createElement('td');
+    const tdTime=document.createElement('td');
+    const tdMach=document.createElement('td');
+    const tdLoad=document.createElement('td');
+
+    const mach=ass[i];
+    runningLoads[mach]+=times[i];
+
+    tdTask.textContent=`Task ${i}`;
+    tdTime.textContent=times[i];
+    tdMach.innerHTML=`<span class="tag">Machine ${mach}</span>`;
+    tdLoad.textContent=runningLoads[mach];
+
+    tr.appendChild(tdTask);
+    tr.appendChild(tdTime);
+    tr.appendChild(tdMach);
+    tr.appendChild(tdLoad);
+    tbody.appendChild(tr);
+  }
+}
+
+/* ===================== Interaction / Wiring =================== */
+let currentPSO = null;
+
+function readInputs(){
+  const n = Math.max(1,Math.min(40,parseInt(document.getElementById('numTasks').value,10)||10));
+  const m = Math.max(2,Math.min(10,parseInt(document.getElementById('numMachines').value,10)||3));
+  const durationsText = document.getElementById('taskDurations').value;
+  const times = parseTaskDurations(n,durationsText);
+
+  const swarmSize = Math.max(5,Math.min(200,parseInt(document.getElementById('swarmSize').value,10)||40));
+  const iterations = Math.max(1,Math.min(500,parseInt(document.getElementById('iterations').value,10)||80));
+  const w = parseFloat(document.getElementById('inertia').value)||0.7;
+  const c = parseFloat(document.getElementById('coeff').value)||1.6;
+
+  return {n,m,times,swarmSize,iterations,w,c};
+}
+
+function initializePSOFromInputs(){
+  const data = readInputs();
+  document.getElementById('numTasks').value = data.n;
+  document.getElementById('numMachines').value = data.m;
+
+  currentPSO = new PSO(
+    data.times,
+    data.m,
+    {swarmSize:data.swarmSize,w:data.w,c1:data.c,c2:data.c}
+  );
+  initCharts(data.m);
+  updateCharts(currentPSO);
+  renderGantt(currentPSO);
+  renderAssignmentTable(currentPSO);
+  updateInfoLabels();
+
+  return data;
+}
+
+function updateInfoLabels(){
+  const bestLabel=document.getElementById('bestMakespanLabel');
+  const iterLabel=document.getElementById('iterationLabel');
+  const machinesLabel=document.getElementById('machinesLabel');
+
+  if(!currentPSO){
+    bestLabel.textContent='—';
+    iterLabel.textContent='—';
+    machinesLabel.textContent='—';
+    return;
+  }
+  const ass=currentPSO.bestAssignment();
+  const mk = makespan(ass,currentPSO.times,currentPSO.m);
+  bestLabel.textContent = mk.toString();
+  iterLabel.textContent = currentPSO.iteration.toString();
+  machinesLabel.textContent = currentPSO.m.toString();
+}
+
+/* Run full PSO for given iterations */
+function runPSOFull(){
+  if(!currentPSO) return;
+  const {iterations} = readInputs();
+
+  for(let i=0;i<iterations;i++){
+    currentPSO.step();
+  }
+  updateCharts(currentPSO);
+  renderGantt(currentPSO);
+  renderAssignmentTable(currentPSO);
+  updateInfoLabels();
+}
+
+function stepOnce(){
+  if(!currentPSO) return;
+  currentPSO.step();
+  updateCharts(currentPSO);
+  renderGantt(currentPSO);
+  renderAssignmentTable(currentPSO);
+  updateInfoLabels();
+}
+
+/* Random tasks helper */
+function randomizeTasks(){
+  const n = Math.max(1,Math.min(40,parseInt(document.getElementById('numTasks').value,10)||10));
+  const arr=[];
+  for(let i=0;i<n;i++){
+    arr.push(Math.floor(Math.random()*14)+2);
+  }
+  document.getElementById('taskDurations').value = arr.join(', ');
+}
+
+/* =============== Initial setup & event listeners ============== */
+window.addEventListener('DOMContentLoaded',()=>{
+  initCharts(3);
+  const data = initializePSOFromInputs(); // builds initial PSO with defaults
+
+  document.getElementById('btnRandomTasks').addEventListener('click',e=>{
+    e.preventDefault();
+    randomizeTasks();
+    initializePSOFromInputs();
+  });
+
+  document.getElementById('btnRun').addEventListener('click',e=>{
+    e.preventDefault();
+    initializePSOFromInputs();
+    runPSOFull();
+  });
+
+  document.getElementById('btnStep').addEventListener('click',e=>{
+    e.preventDefault();
+    if(!currentPSO){
+      initializePSOFromInputs();
+    }
+    stepOnce();
+  });
+});
+</script>
+</body>
+</html>

@@ -4,6 +4,8 @@ An interactive **web dashboard** that brings together Design & Analysis of Algor
 
 Everything runs in the browser – just open `index.html` and explore the experiments from a clean, professional UI.
 
+<img width="1905" height="668" alt="image" src="https://github.com/user-attachments/assets/9b297b30-eb0f-42b3-8ff8-701a50af0cbb" />
+
 ---
 
 ## 🚀 Features
