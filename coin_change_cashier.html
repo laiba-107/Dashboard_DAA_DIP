@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Coin Change — Cashier's Greedy Algorithm</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root{
+    --bg:#0b1220;
+    --panel:#0f172a;
+    --border:#1f2a44;
+    --text:#e5e7eb;
+    --muted:#9aa3b2;
+    --accent:#38bdf8;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",Arial;
+  }
+  header{
+    padding:14px 22px;
+    border-bottom:1px solid var(--border);
+    background:#09101d;
+  }
+  header h1{margin:0;font-size:1.3rem;}
+  header p{margin:4px 0 0;font-size:.9rem;color:var(--muted);}
+  main{max-width:960px;margin:20px auto;padding:0 16px;}
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:14px 16px;
+    margin-bottom:16px;
+  }
+  .card h2{margin:0 0 10px;font-size:1.1rem;}
+  .row{display:grid;grid-template-columns:repeat(12,1fr);gap:10px;margin-bottom:10px;}
+  .col-6{grid-column:span 6}
+  .col-3{grid-column:span 3}
+  .col-12{grid-column:span 12}
+  label{display:block;font-size:.9rem;color:var(--muted);margin-bottom:4px;}
+  input[type="number"],input[type="text"]{
+    width:100%;
+    padding:8px 10px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:#0a1426;
+    color:var(--text);
+    font-size:.95rem;
+  }
+  input:focus{outline:none;border-color:var(--accent);}
+  .btn{
+    appearance:none;
+    border:none;
+    border-radius:10px;
+    padding:9px 14px;
+    cursor:pointer;
+    color:#fff;
+    background:linear-gradient(90deg,#38bdf8,#0ea5e9);
+    font-size:.95rem;
+  }
+  .muted{color:var(--muted);font-size:.88rem;}
+  .algo-table{
+    width:100%;
+    border-collapse:collapse;
+    margin:8px 0 6px;
+    background:#0a1325;
+    font-size:.9rem;
+  }
+  .algo-table thead th{background:#11203a}
+  .algo-table th,.algo-table td{
+    border:1px solid var(--border);
+    padding:6px 8px;
+    text-align:center;
+  }
+  .algo-table tbody tr:nth-child(odd){background:#0b162a}
+  .algo-table tbody tr:nth-child(even){background:#0c182f}
+  .steps-out{
+    white-space:pre-wrap;
+    font-family:"Fira Code","JetBrains Mono",monospace;
+    font-size:.88rem;
+  }
+
+  /* --- Coin visualization --- */
+  .coin-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin:8px 0 4px;
+  }
+  .coin{
+    width:56px;
+    height:56px;
+    border-radius:50%;
+    border:3px solid #facc15;
+    background:radial-gradient(circle at 30% 30%, #fef9c3, #facc15);
+    box-shadow:
+      0 0 0 1px rgba(15,23,42,.6),
+      0 4px 10px rgba(0,0,0,.45);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:700;
+    color:#78350f;
+    font-size:.9rem;
+  }
+  .coin-unused{
+    border-color:#64748b;
+    background:radial-gradient(circle at 30% 30%, #e5e7eb,#9ca3af);
+    color:#111827;
+    opacity:.85;
+  }
+  .coin-more{
+    border-color:#38bdf8;
+    background:#0f172a;
+    color:#e5e7eb;
+    font-size:.78rem;
+    padding:4px;
+  }
+  .coin-caption{
+    font-size:.82rem;
+    color:var(--muted);
+    margin-bottom:4px;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Coin Change — Cashier's Greedy Algorithm</h1>
+  <p>At each step, use the largest possible coin not exceeding the remaining amount.</p>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Input</h2>
+    <div class="row">
+      <div class="col-6">
+        <label>Coin denominations (comma-separated)</label>
+        <input id="cgCoins" type="text" value="1,5,10,25">
+      </div>
+      <div class="col-3">
+        <label>Amount N</label>
+        <input id="cgN" type="number" value="63" min="0">
+      </div>
+      <div class="col-12">
+        <button class="btn" onclick="runCashier()">Run Cashier's Algorithm</button>
+        <p class="muted">
+          Circular coins below represent the actual coins returned by the greedy algorithm.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="cgOut">
+    <!-- Output goes here -->
+  </section>
+</main>
+
+<script>
+const numList = s => s.split(/[, ]+/).map(t=>t.trim()).filter(Boolean).map(Number);
+
+function cashierGreedy(denoms, amount){
+  // sort denominations descending
+  denoms = [...denoms].sort((a,b)=>b-a);
+  const result = [];
+  let remaining = amount;
+  const steps = [];
+
+  for(const coin of denoms){
+    if(coin <= 0) continue;
+    const k = Math.floor(remaining / coin);
+    if(k > 0){
+      result.push({coin, count:k});
+      steps.push(`Take ${k} coin(s) of ${coin} → subtract ${k*coin}, remaining ${remaining - k*coin}`);
+      remaining -= k*coin;
+    }else{
+      steps.push(`Skip coin ${coin} (too large for remaining ${remaining})`);
+    }
+    if(remaining === 0) break;
+  }
+
+  return {result, remaining, steps};
+}
+
+function runCashier(){
+  const denoms = numList(document.getElementById('cgCoins').value)
+    .filter(x=>Number.isFinite(x) && x>0);
+  const N = +document.getElementById('cgN').value;
+  const out = document.getElementById('cgOut');
+  out.innerHTML = '';
+
+  if(!denoms.length){
+    out.innerHTML = '<p class="muted">Enter at least one positive denomination.</p>';
+    return;
+  }
+  if(!Number.isInteger(N) || N<0){
+    out.innerHTML = '<p class="muted">Amount N must be an integer ≥ 0.</p>';
+    return;
+  }
+
+  const {result, remaining, steps} = cashierGreedy(denoms, N);
+
+  let html = `<h2>Result</h2>
+    <p><strong>Denominations:</strong> ${denoms.sort((a,b)=>a-b).join(', ')}
+    &nbsp; | &nbsp; <strong>Amount:</strong> ${N}</p>`;
+
+  if(remaining !== 0){
+    html += `<p class="muted">
+      Greedy algorithm could not make exact change. Remaining amount: ${remaining}.
+    </p>`;
+  }
+
+  if(result.length === 0){
+    html += `<p><strong>No coins used</strong> (either amount is 0 or no valid coins).</p>`;
+  }else{
+    html += `<p><strong>Coins used (greedy):</strong></p>
+      <table class="algo-table">
+        <thead><tr><th>Coin</th><th>Count</th><th>Total value</th></tr></thead><tbody>`;
+    let totalCoins = 0;
+    let usedSum = 0;
+    result.forEach(r=>{
+      totalCoins += r.count;
+      usedSum += r.coin * r.count;
+      html += `<tr><td>${r.coin}</td><td>${r.count}</td><td>${r.coin * r.count}</td></tr>`;
+    });
+    html += `</tbody></table>`;
+    html += `<p><strong>Total coins:</strong> ${totalCoins}
+             &nbsp; | &nbsp; <strong>Sum of used coins:</strong> ${usedSum}</p>`;
+  }
+
+  /* --- Coin visualization --- */
+
+  // Map coin -> count
+  const usedMap = new Map();
+  result.forEach(r => usedMap.set(r.coin, r.count));
+
+  // Row: all denominations once (unused shown in grey)
+  const sortedAll = [...denoms].sort((a,b)=>b-a);
+  html += `<div class="coin-caption">Denominations (gold = used, grey = not used):</div>`;
+  html += `<div class="coin-row">`;
+  sortedAll.forEach(c=>{
+    const used = usedMap.has(c);
+    html += `<div class="coin ${used ? '' : 'coin-unused'}">${c}</div>`;
+  });
+  html += `</div>`;
+
+  // Row: actual coins returned (multiple copies)
+  html += `<div class="coin-caption">Greedy change (actual coins):</div>`;
+
+  let coinsHTML = "";
+  result.forEach(r=>{
+    const maxShow = 20;          // avoid hundreds of DOM nodes
+    const show = Math.min(r.count, maxShow);
+    for(let i=0;i<show;i++){
+      coinsHTML += `<div class="coin">${r.coin}</div>`;
+    }
+    if(r.count > maxShow){
+      coinsHTML += `<div class="coin coin-more">+${r.count-maxShow}<br>more</div>`;
+    }
+  });
+
+  if(coinsHTML){
+    html += `<div class="coin-row">${coinsHTML}</div>`;
+  }else{
+    html += `<p class="muted">No coins are needed for amount 0.</p>`;
+  }
+
+  /* --- Steps --- */
+  html += `<p><strong>Greedy steps (trace):</strong></p>
+           <pre class="steps-out">${steps.join('\n')}</pre>`;
+
+  out.innerHTML = html;
+}
+</script>
+</body>
+</html>

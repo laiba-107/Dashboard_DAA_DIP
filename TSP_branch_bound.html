@@ -423,6 +423,12 @@
       border-top: 1px solid rgba(15,23,42,0.9);
       background: rgba(2,6,23,0.98);
     }
+
+    .node-info {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
   </style>
 </head>
 
@@ -434,7 +440,7 @@
       Branch &amp; Bound — TSP
     </h1>
     <div class="subtitle">
-      Enter your own cost matrix, see Setting / Row / Column reduction tables and the Branch &amp; Bound search tree.
+      Best-first Branch &amp; Bound for TSP with matrix reductions and search-tree visualization.
     </div>
   </div>
   <div class="pill">
@@ -450,15 +456,16 @@
       <div class="card-inner">
         <div class="card-header">
           <div class="card-title">
-            TSP Input &amp; Matrix Reductions
+            TSP Input &amp; Node Matrix View
             <span class="card-title-badge">Branch &amp; Bound</span>
           </div>
         </div>
         <p class="card-description">
           1) Choose the number of cities.  
           2) Click <strong>“Generate matrix”</strong> to create an editable table.  
-          3) Fill in your own costs (leave blank for ∞).  
-          4) Click <strong>“Solve TSP”</strong> to visualize the algorithm.
+          3) Fill in your own costs (leave blank for ∞). Diagonals (1–1, 2–2, …) are fixed to ∞.  
+          4) Click <strong>“Solve TSP”</strong>.  
+          5) Click any node in the tree (right) to see its Setting / Row / Column tables.
         </p>
 
         <div class="controls-row">
@@ -476,30 +483,34 @@
 
         <div id="matrixInputWrapper" class="matrix-container" style="margin-top:8px; display:none;">
           <div class="matrix-caption">
-            Enter the cost from city <strong>i</strong> (row) to city <strong>j</strong> (column).  
-            Diagonal is fixed to 0 and ignored. Empty/invalid = <em>∞</em>.  
-            <strong>Note:</strong> i and j are numbered from 1.
+            Cost from city <strong>i</strong> (row) to city <strong>j</strong> (column).  
+            Diagonal (1–1, 2–2, …) is fixed to <strong>∞</strong> (no self-loop).  
+            Empty/invalid cells are treated as <em>∞</em>. i and j start from 1.
           </div>
           <div id="matrixInputArea"></div>
         </div>
 
+        <div class="node-info" id="nodeInfoBar" style="display:none;">
+          <span id="nodeInfoText"></span>
+        </div>
+
         <div class="matrices-grid" id="matricesGrid" style="display:none;">
           <div>
-            <div class="matrix-caption"><strong>Setting Matrix</strong> (original costs)</div>
+            <div class="matrix-caption"><strong>Setting Matrix</strong> (for selected node)</div>
             <div class="matrix-container">
               <div id="settingMatrixArea"></div>
             </div>
           </div>
 
           <div>
-            <div class="matrix-caption"><strong>Row Reduction</strong> (reduced rows)</div>
+            <div class="matrix-caption"><strong>Row Reduction</strong> (selected node)</div>
             <div class="matrix-container">
               <div id="rowReductionArea"></div>
             </div>
           </div>
 
           <div>
-            <div class="matrix-caption"><strong>Column Reduction</strong> (reduced columns)</div>
+            <div class="matrix-caption"><strong>Column Reduction</strong> (selected node)</div>
             <div class="matrix-container">
               <div id="colReductionArea"></div>
             </div>
@@ -527,20 +538,19 @@
         <div class="card-header">
           <div class="card-title">
             Branch &amp; Bound Search Tree
-            <span class="card-title-badge">Visualization</span>
+            <span class="card-title-badge">Best-first</span>
           </div>
         </div>
         <p class="card-description">
-          Each node shows: <code>path</code>, <code>g = cost</code>, and <code>bound</code> (here bound = cost so far).  
-          Edges are labeled with the cost added by that move.  
-          Pruned nodes are clearly marked when <code>bound ≥ best</code>.  
-          <strong>Note:</strong> cities in the path are shown starting from 1.
+          The algorithm always expands the node with the <strong>lowest bound (LB)</strong> from the live set.  
+          Each node shows <code>path</code>, <code>g = real cost (original matrix)</code>, and <code>LB</code>.  
+          Click a node to see its matrices on the left.
         </p>
 
         <div class="tree-legend">
-          <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="none" stroke="#38bdf8" stroke-width="1.2"/></svg> Active explored state</span>
+          <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="none" stroke="#38bdf8" stroke-width="1.2"/></svg> Expanded internal node</span>
           <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="#22c55e" stroke="#4ade80" stroke-width="1.2"/></svg> Complete tour (leaf)</span>
-          <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="#0f172a" stroke="#f97373" stroke-width="1.2"/></svg> Pruned by bound</span>
+          <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="#0f172a" stroke="#f97373" stroke-width="1.2"/></svg> Pruned node (LB ≥ best)</span>
         </div>
 
         <div id="treeContainer">
@@ -552,8 +562,8 @@
 </main>
 
 <footer>
-  Tip: This demo uses DFS branch &amp; bound with a simple bound = current path cost.  
-  Keep the number of cities small (≤ 9) for a readable tree.
+  Best-first branch &amp; bound with reduced-cost matrices.  
+  Note: keep city count small (≤ 9) so the tree and tables stay readable.
 </footer>
 
 <script>
@@ -578,8 +588,12 @@
   const nodesExploredTag = document.getElementById("nodesExploredTag");
   const prunedTag = document.getElementById("prunedTag");
 
-  let currentMatrix = null;
-  let N = 0;
+  const nodeInfoBar = document.getElementById("nodeInfoBar");
+  const nodeInfoText = document.getElementById("nodeInfoText");
+
+  let nodeByIdGlobal = {};
+  let treeNodesGlobal = [];
+  let currentNodeId = null;
 
   generateBtn.addEventListener("click", () => {
     const n = parseInt(cityCountInput.value, 10);
@@ -587,12 +601,11 @@
       alert("Please choose a city count between 3 and 9.");
       return;
     }
-    N = n;
     buildMatrixInput(n);
-    currentMatrix = null;
     matricesGrid.style.display = "none";
     reductionSummary.style.display = "none";
     resultsSummary.style.display = "none";
+    nodeInfoBar.style.display = "none";
     clearTree();
     solveBtn.disabled = false;
   });
@@ -600,46 +613,35 @@
   solveBtn.addEventListener("click", () => {
     const matrix = readMatrixFromInputs();
     if (!matrix) return;
-    currentMatrix = matrix;
 
-    // Compute and display reductions for the root (Setting / Row / Column)
-    const reductions = computeReductions(matrix);
-
-    settingMatrixArea.innerHTML = renderMatrixHtml(matrix);
-    rowReductionArea.innerHTML = renderMatrixHtml(reductions.rowReduced);
-    colReductionArea.innerHTML = renderMatrixHtml(reductions.colReduced);
-
-    matricesGrid.style.display = "grid";
-
-    rowRedTag.textContent = `Row reduction cost = ${reductions.rowRedCost}`;
-    colRedTag.textContent = `Column reduction cost = ${reductions.colRedCost}`;
-    lbTag.textContent = `Root lower bound = ${reductions.lowerBound}`;
-    reductionSummary.style.display = "flex";
-
-    // Run branch & bound TSP search
     const result = runBranchAndBound(matrix);
 
-    bestCostTag.textContent = isFinite(result.bestCost)
-      ? `Best tour cost = ${result.bestCost}`
-      : "Best tour cost = ∞ (no Hamiltonian cycle)";
-    if (result.bestPath && isFinite(result.bestCost)) {
+    nodeByIdGlobal = result.nodeById;
+    treeNodesGlobal = result.treeNodes;
+    currentNodeId = result.lastExpandedId != null ? result.lastExpandedId : result.rootId;
+
+    // Show global results
+    if (isFinite(result.bestCost) && result.bestPath) {
+      bestCostTag.textContent = `Best tour cost = ${result.bestCost}`;
       const displayPath = result.bestPath.map(i => i + 1).join(" → ");
       bestPathTag.textContent = `Best tour = ${displayPath}`;
     } else {
+      bestCostTag.textContent = "Best tour cost = ∞ (no Hamiltonian cycle)";
       bestPathTag.textContent = "Best tour = No Hamiltonian cycle";
     }
-    nodesExploredTag.textContent = `Nodes explored = ${result.nodesExplored}`;
+    nodesExploredTag.textContent = `Nodes explored (expanded) = ${result.nodesExplored}`;
     prunedTag.textContent = `Nodes pruned = ${result.prunedCount}`;
     resultsSummary.style.display = "flex";
 
-    // Render tree
-    renderTree(result.treeNodes);
+    renderTree(treeNodesGlobal);
+    showNodeMatrices(currentNodeId);
   });
 
   function buildMatrixInput(n) {
     matrixInputWrapper.style.display = "block";
     const table = document.createElement("table");
     table.className = "matrix-table matrix-input-table";
+
     const thead = document.createElement("thead");
     const headerRow = document.createElement("tr");
     const corner = document.createElement("th");
@@ -648,7 +650,7 @@
 
     for (let j = 0; j < n; j++) {
       const th = document.createElement("th");
-      th.textContent = j + 1;  // 1-based
+      th.textContent = j + 1; // 1-based
       headerRow.appendChild(th);
     }
     thead.appendChild(headerRow);
@@ -658,15 +660,15 @@
     for (let i = 0; i < n; i++) {
       const tr = document.createElement("tr");
       const th = document.createElement("th");
-      th.textContent = i + 1;  // 1-based
+      th.textContent = i + 1; // 1-based
       tr.appendChild(th);
 
       for (let j = 0; j < n; j++) {
         const td = document.createElement("td");
         if (i === j) {
-          td.classList.add("diagonal");
+          td.classList.add("diagonal", "inf");
           const span = document.createElement("span");
-          span.textContent = "0";
+          span.textContent = "∞";
           td.appendChild(span);
         } else {
           const input = document.createElement("input");
@@ -698,11 +700,11 @@
       const cells = rows[i].querySelectorAll("td");
       for (let j = 0; j < n; j++) {
         if (i === j) {
-          matrix[i][j] = 0;
+          matrix[i][j] = Infinity; // diagonal = ∞
           continue;
         }
         const input = cells[j].querySelector("input");
-        const value = input.value.trim();
+        const value = input ? input.value.trim() : "";
         if (!value) {
           matrix[i][j] = Infinity;
         } else {
@@ -718,14 +720,15 @@
     return matrix;
   }
 
-  // ----- Matrix reductions (root only, for visualization) -----
-  function computeReductions(matrix) {
-    const n = matrix.length;
-    const rowReduced = matrix.map(row => row.slice());
-    const colReduced = matrix.map(row => row.slice());
+  function deepCopyMatrix(mat) {
+    return mat.map(row => row.slice());
+  }
 
+  // Row + column reduction for a given matrix
+  function reduceMatrix(matrix) {
+    const n = matrix.length;
+    const rowReduced = deepCopyMatrix(matrix);
     let rowRedCost = 0;
-    let colRedCost = 0;
 
     // Row reduction
     for (let i = 0; i < n; i++) {
@@ -743,14 +746,9 @@
       }
     }
 
-    // Copy before column reduction
-    for (let i = 0; i < n; i++) {
-      for (let j = 0; j < n; j++) {
-        colReduced[i][j] = rowReduced[i][j];
-      }
-    }
-
     // Column reduction
+    const colReduced = deepCopyMatrix(rowReduced);
+    let colRedCost = 0;
     for (let j = 0; j < n; j++) {
       let minVal = Infinity;
       for (let i = 0; i < n; i++) {
@@ -766,12 +764,197 @@
       }
     }
 
+    return { rowReduced, colReduced, rowRedCost, colRedCost };
+  }
+
+  // Best-first Branch & Bound with reduced-cost matrices
+  function runBranchAndBound(originalMatrix) {
+    const n = originalMatrix.length;
+    const original = deepCopyMatrix(originalMatrix);
+
+    const nodes = [];
+    const nodeById = {};
+    const live = [];
+    let nextId = 1;
+    let nodesExplored = 0;
+    let prunedCount = 0;
+    let bestCost = Infinity;
+    let bestPath = null;
+    let expansionStep = 0;
+
+    function computeTourCost(path) {
+      let cost = 0;
+      for (let i = 0; i < path.length - 1; i++) {
+        const c = original[path[i]][path[i + 1]];
+        if (!isFinite(c)) return Infinity;
+        cost += c;
+      }
+      const back = original[path[path.length - 1]][path[0]];
+      if (!isFinite(back)) return Infinity;
+      cost += back;
+      return cost;
+    }
+
+    function createRoot() {
+      const setting = deepCopyMatrix(original);
+      for (let i = 0; i < n; i++) setting[i][i] = Infinity;
+      const red = reduceMatrix(setting);
+      const lb = red.rowRedCost + red.colRedCost;
+      const pathStr = "1";
+      const node = {
+        id: 0,
+        parentId: null,
+        path: [0],
+        pathStr,
+        lb,
+        reducedMat: red.colReduced,
+        realCost: 0,
+        edgeCost: null,
+        type: "live",
+        expansionStep: null,
+        details: {
+          setting,
+          rowReduced: red.rowReduced,
+          colReduced: red.colReduced,
+          rowRedCost: red.rowRedCost,
+          colRedCost: red.colRedCost
+        }
+      };
+      return node;
+    }
+
+    function createChild(parent, nextCity) {
+      const u = parent.path[parent.path.length - 1];
+      const v = nextCity;
+      if (parent.path.includes(v)) return null;
+
+      const redMat = parent.reducedMat;
+      const costRed = redMat[u][v];
+      if (!isFinite(costRed)) return null;
+
+      const setting = deepCopyMatrix(redMat);
+      for (let k = 0; k < n; k++) {
+        setting[u][k] = Infinity;
+        setting[k][v] = Infinity;
+      }
+      for (let i = 0; i < n; i++) setting[i][i] = Infinity;
+
+      const red = reduceMatrix(setting);
+      const lb = parent.lb + costRed + red.rowRedCost + red.colRedCost;
+
+      const origEdge = original[u][v];
+      const realCost = (!isFinite(origEdge) ? Infinity : parent.realCost + origEdge);
+
+      const path = parent.path.slice();
+      path.push(v);
+      const pathStr = path.map(x => x + 1).join("→");
+
+      const node = {
+        id: nextId++,
+        parentId: parent.id,
+        path,
+        pathStr,
+        lb,
+        reducedMat: red.colReduced,
+        realCost,
+        edgeCost: origEdge,
+        type: "live",
+        expansionStep: null,
+        details: {
+          setting,
+          rowReduced: red.rowReduced,
+          colReduced: red.colReduced,
+          rowRedCost: red.rowRedCost,
+          colRedCost: red.colRedCost
+        }
+      };
+      return node;
+    }
+
+    const root = createRoot();
+    nodes.push(root);
+    nodeById[root.id] = root;
+    live.push(root);
+
+    while (live.length > 0) {
+      // choose node with smallest bound
+      live.sort((a, b) => a.lb - b.lb);
+      const node = live.shift();
+      if (!node || node.type !== "live") continue;
+
+      nodesExplored++;
+
+      if (!isFinite(node.lb) || node.lb >= bestCost) {
+        node.type = "pruned";
+        prunedCount++;
+        continue;
+      }
+
+      const path = node.path;
+      if (path.length === n) {
+        const tourCost = computeTourCost(path);
+        node.realCost = tourCost;
+        node.expansionStep = ++expansionStep;
+        if (isFinite(tourCost) && tourCost < bestCost) {
+          bestCost = tourCost;
+          bestPath = path.slice();
+          bestPath.push(path[0]);
+        }
+        node.type = "leaf";
+        continue;
+      }
+
+      node.type = "expanded";
+      node.expansionStep = ++expansionStep;
+
+      for (let v = 0; v < n; v++) {
+        if (path.includes(v)) continue;
+        const child = createChild(node, v);
+        if (!child) continue;
+
+        nodes.push(child);
+        nodeById[child.id] = child;
+
+        if (!isFinite(child.lb) || child.lb >= bestCost) {
+          child.type = "pruned";
+          prunedCount++;
+        } else {
+          live.push(child);
+        }
+      }
+    }
+
+    const treeNodes = nodes.map(n => ({
+      id: n.id,
+      parentId: n.parentId,
+      type: n.type,
+      edgeCost: n.edgeCost,
+      pathStr: n.pathStr,
+      cost: n.realCost,
+      bound: n.lb,
+      step: n.expansionStep
+    }));
+
+    let lastExpandedId = root.id;
+    let bestStepNode = null;
+    for (const n of nodes) {
+      if (typeof n.expansionStep === "number" && n.expansionStep > 0) {
+        if (!bestStepNode || n.expansionStep > bestStepNode.expansionStep) {
+          bestStepNode = n;
+        }
+      }
+    }
+    if (bestStepNode) lastExpandedId = bestStepNode.id;
+
     return {
-      rowReduced,
-      colReduced,
-      rowRedCost,
-      colRedCost,
-      lowerBound: rowRedCost + colRedCost
+      bestCost,
+      bestPath,
+      nodesExplored,
+      prunedCount,
+      treeNodes,
+      nodeById,
+      rootId: root.id,
+      lastExpandedId
     };
   }
 
@@ -780,12 +963,12 @@
     let html = '<table class="matrix-table">';
     html += "<thead><tr><th>i \\ j</th>";
     for (let j = 0; j < n; j++) {
-      html += `<th>${j + 1}</th>`;  // 1-based
+      html += `<th>${j + 1}</th>`;
     }
     html += "</tr></thead><tbody>";
 
     for (let i = 0; i < n; i++) {
-      html += `<tr><th>${i + 1}</th>`;  // 1-based
+      html += `<tr><th>${i + 1}</th>`;
       for (let j = 0; j < n; j++) {
         const val = matrix[i][j];
         const isDiag = i === j;
@@ -804,138 +987,55 @@
     return html;
   }
 
-  // ----- Branch & Bound TSP (DFS with pruning on bound = g) -----
-  function runBranchAndBound(matrix) {
-    const n = matrix.length;
-    let bestCost = Infinity;
-    let bestPath = [];  // 0-based indices
-    let nodesExplored = 0;
-    let prunedCount = 0;
-
-    const treeNodes = [];
-    let nodeIdCounter = 0;
-
-    const visited = Array(n).fill(false);
-    visited[0] = true;
-
-    function dfs(path, costSoFar, parentId, edgeFromParent) {
-      const last = path[path.length - 1];
-      const bound = costSoFar; // here bound is just g(n)
-
-      const nodeId = nodeIdCounter++;
-      nodesExplored++;
-
-      let nodeType = "active";
-      const displayPath = path.map(x => x + 1).join("→"); // 1-based for visualization
-      let label = `path=${displayPath}, g=${costSoFar}, bound=${bound}`;
-
-      const node = {
-        id: nodeId,
-        parentId,
-        label,
-        type: nodeType,
-        cost: costSoFar,
-        bound: bound,
-        edgeCost: edgeFromParent,
-        pathStr: displayPath
-      };
-
-      // If complete tour, add return to city 1 (index 0)
-      if (path.length === n) {
-        const backCost = matrix[last][path[0]];
-        if (isFinite(backCost)) {
-          const totalCost = costSoFar + backCost;
-          nodeType = "leaf";
-          node.label = `${label}, +return=${backCost} ⇒ ${totalCost}`;
-          node.type = nodeType;
-
-          if (totalCost < bestCost) {
-            bestCost = totalCost;
-            bestPath = [...path, path[0]];
-          }
-        } else {
-          nodeType = "leaf";
-          node.label = `${label}, cannot return to city 1 (∞)`;
-          node.type = nodeType;
-        }
-        treeNodes.push(node);
-        return;
-      }
-
-      // Prune if bound is already worse than best
-      if (bound >= bestCost) {
-        nodeType = "pruned";
-        node.label = `${label}  [pruned: bound ≥ best]`;
-        node.type = nodeType;
-        prunedCount++;
-        treeNodes.push(node);
-        return;
-      }
-
-      // Otherwise keep as active and explore children
-      treeNodes.push(node);
-
-      for (let next = 0; next < n; next++) {
-        if (!visited[next]) {
-          const edgeCost = matrix[last][next];
-          if (!isFinite(edgeCost)) continue; // skip impossible move
-
-          const newCost = costSoFar + edgeCost;
-
-          if (newCost >= bestCost) {
-            prunedCount++;
-            continue;
-          }
-
-          visited[next] = true;
-          path.push(next);
-          dfs(path, newCost, nodeId, edgeCost);
-          path.pop();
-          visited[next] = false;
-        }
-      }
+  function showNodeMatrices(nodeId) {
+    const node = nodeByIdGlobal[nodeId];
+    if (!node || !node.details) {
+      matricesGrid.style.display = "none";
+      reductionSummary.style.display = "none";
+      nodeInfoBar.style.display = "none";
+      return;
     }
 
-    dfs([0], 0, null, null);
+    matricesGrid.style.display = "grid";
+    reductionSummary.style.display = "flex";
+    nodeInfoBar.style.display = "block";
 
-    if (!bestPath.length) {
-      return {
-        bestCost: Infinity,
-        bestPath: null,
-        nodesExplored,
-        prunedCount,
-        treeNodes
-      };
-    }
+    settingMatrixArea.innerHTML = renderMatrixHtml(node.details.setting);
+    rowReductionArea.innerHTML = renderMatrixHtml(node.details.rowReduced);
+    colReductionArea.innerHTML = renderMatrixHtml(node.details.colReduced);
 
-    return {
-      bestCost,
-      bestPath,
-      nodesExplored,
-      prunedCount,
-      treeNodes
-    };
+    rowRedTag.textContent = `Row reduction cost = ${node.details.rowRedCost}`;
+    colRedTag.textContent = `Column reduction cost = ${node.details.colRedCost}`;
+    lbTag.textContent = `Node bound (LB) = ${node.lb}`;
+
+    const stepTxt = node.expansionStep
+      ? `Step ${node.expansionStep}`
+      : "Not expanded (generated but never chosen)";
+    const typeTxt = node.type;
+    const gTxt = isFinite(node.realCost) ? node.realCost : "∞";
+
+    nodeInfoText.textContent =
+      `${stepTxt} · type = ${typeTxt} · path = ${node.pathStr} · g = ${gTxt} · LB = ${node.lb}`;
+    currentNodeId = nodeId;
   }
 
-  // ----- D3 Tree Rendering -----
-  function renderTree(nodes) {
+  function renderTree(treeNodes) {
     const svg = d3.select("#treeSvg");
     svg.selectAll("*").remove();
 
-    if (!nodes || nodes.length === 0) return;
+    if (!treeNodes || treeNodes.length === 0) return;
 
-    // Build hierarchy
-    const nodeById = new Map();
-    nodes.forEach(n => {
-      nodeById.set(n.id, { ...n, children: [] });
+    const nodeMap = new Map();
+    treeNodes.forEach(n => {
+      nodeMap.set(n.id, Object.assign({ children: [] }, n));
     });
 
     let root = null;
-    nodeById.forEach(n => {
+    nodeMap.forEach(n => {
       if (n.parentId == null) {
         root = n;
       } else {
-        const parent = nodeById.get(n.parentId);
+        const parent = nodeMap.get(n.parentId);
         if (parent) parent.children.push(n);
       }
     });
@@ -973,7 +1073,6 @@
       .attr("stroke-dasharray", d => d.target.data.type === "pruned" ? "4,3" : "0")
       .attr("opacity", 0.85);
 
-    // Edge cost labels
     linkGroup.append("text")
       .attr("class", "tree-edge-label")
       .attr("text-anchor", "middle")
@@ -988,13 +1087,16 @@
           .text(edgeCost);
       });
 
-    // Nodes
     const nodeGroup = svg.append("g")
       .selectAll("g")
       .data(rootHierarchy.descendants())
       .enter()
       .append("g")
-      .attr("transform", d => `translate(${d.y + 40}, ${d.x + 20})`);
+      .attr("transform", d => `translate(${d.y + 40}, ${d.x + 20})`)
+      .style("cursor", "pointer")
+      .on("click", function(event, d) {
+        showNodeMatrices(d.data.id);
+      });
 
     nodeGroup.append("circle")
       .attr("r", 8)
@@ -1012,16 +1114,15 @@
         return "#38bdf8";
       });
 
-    // Node labels (show path, g, bound) with 1-based paths already stored
     nodeGroup.append("text")
       .attr("class", "tree-node-label")
       .attr("dy", -12)
       .attr("text-anchor", "middle")
       .each(function(d) {
         const el = d3.select(this);
-        const pathLine = `path=${d.data.pathStr || ""}`; // already 1-based
-        const gLine = `g=${d.data.cost}`;
-        const bLine = `b=${d.data.bound}`;
+        const pathLine = `path=${d.data.pathStr || ""}`;
+        const gLine = `g=${isFinite(d.data.cost) ? d.data.cost : "∞"}`;
+        const bLine = `LB=${d.data.bound}`;
         const lines = [pathLine, gLine, bLine];
 
         lines.forEach((line, i) => {

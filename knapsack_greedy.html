@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>0/1 Knapsack — Greedy by Profit</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root{
+    --bg:#0b1220;
+    --panel:#0f172a;
+    --border:#1f2a44;
+    --text:#e5e7eb;
+    --muted:#9aa3b2;
+    --accent:#38bdf8;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",Arial;
+  }
+  header{
+    padding:14px 22px;
+    border-bottom:1px solid var(--border);
+    background:#09101d;
+  }
+  header h1{margin:0;font-size:1.3rem;}
+  header p{margin:4px 0 0;font-size:.9rem;color:var(--muted);}
+  main{max-width:1060px;margin:20px auto;padding:0 16px;}
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:14px 16px;
+    margin-bottom:16px;
+  }
+  .card h2{margin:0 0 10px;font-size:1.1rem;}
+  .row{display:grid;grid-template-columns:repeat(12,1fr);gap:10px;margin-bottom:10px;}
+  .col-4{grid-column:span 4}
+  .col-12{grid-column:span 12}
+  label{display:block;font-size:.9rem;color:var(--muted);margin-bottom:4px;}
+  input[type="number"],input[type="text"]{
+    width:100%;
+    padding:8px 10px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:#0a1426;
+    color:var(--text);
+    font-size:.95rem;
+  }
+  input:focus{outline:none;border-color:var(--accent);}
+  .btn{
+    appearance:none;
+    border:none;
+    border-radius:10px;
+    padding:9px 14px;
+    cursor:pointer;
+    color:#fff;
+    background:linear-gradient(90deg,#22c55e,#16a34a);
+    font-size:.95rem;
+  }
+  .muted{color:var(--muted);font-size:.88rem;}
+  .algo-table{
+    width:100%;
+    border-collapse:collapse;
+    margin:8px 0 6px;
+    background:#0a1325;
+    font-size:.9rem;
+  }
+  .algo-table thead th{background:#11203a}
+  .algo-table th,.algo-table td{
+    border:1px solid var(--border);
+    padding:6px 8px;
+    text-align:center;
+  }
+  .algo-table tbody tr:nth-child(odd){background:#0b162a}
+  .algo-table tbody tr:nth-child(even){background:#0c182f}
+  .out{white-space:pre-wrap;font-family:"Fira Code","JetBrains Mono",monospace;font-size:.88rem;}
+
+  /* --- Tall bar visualization (slide-like) --- */
+  .viz-section-title{
+    margin:10px 0 4px;
+    font-size:1rem;
+    font-weight:600;
+  }
+  .viz-row{
+    display:flex;
+    align-items:flex-end;
+    gap:32px;
+    flex-wrap:wrap;
+    margin:12px 0 6px;
+  }
+  .tower-block{
+    text-align:center;
+    min-width:80px;
+  }
+  .tower-profit{
+    font-size:.85rem;
+    margin-bottom:2px;
+  }
+  .tower-name{
+    font-size:.83rem;
+    margin-top:4px;
+    color:var(--muted);
+  }
+  .tower{
+    width:70px;
+    border-radius:6px;
+    border:2px solid #64748b;
+    background:#020617;
+    display:flex;
+    flex-direction:column-reverse;
+    overflow:hidden;
+    margin:0 auto;
+    position:relative;
+  }
+  .tower-empty{
+    background:transparent;
+  }
+  .tower-seg{
+    width:100%;
+    font-size:.78rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-top:1px solid rgba(15,23,42,.6);
+    color:#020617;
+  }
+  .seg-i0{background:#fee2e2;} /* different colors per item */
+  .seg-i1{background:#bfdbfe;}
+  .seg-i2{background:#bbf7d0;}
+  .seg-i3{background:#fde68a;}
+  .seg-i4{background:#e9d5ff;}
+  .seg-i5{background:#fecaca;}
+  .tower-label{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    font-size:.8rem;
+    color:#e5e7eb;
+    pointer-events:none;
+  }
+  .tower-knap{
+    border-style:dashed;
+    border-color:#cbd5f5;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>0/1 Knapsack — Greedy by Profit</h1>
+  <p>Greedy: choose highest profit items first. Visualization compares greedy packing vs optimal (DP) packing.</p>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Input</h2>
+    <div class="row">
+      <div class="col-4">
+        <label>Knapsack Capacity (W)</label>
+        <input id="kgW" type="number" value="25" min="1">
+      </div>
+      <div class="col-4">
+        <label>Item Profits (comma-separated)</label>
+        <input id="kgVals" type="text" value="70,90,140">
+      </div>
+      <div class="col-4">
+        <label>Item Weights (comma-separated)</label>
+        <input id="kgWts" type="text" value="5,10,25">
+      </div>
+      <div class="col-12">
+        <button class="btn" onclick="runKnapsackGreedy()">Run Greedy</button>
+        <p class="muted">Bars below imitate the lecture-style picture: items, empty knapsack, greedy solution, and optimal solution.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="kgOut">
+    <!-- Output goes here -->
+  </section>
+</main>
+
+<script>
+const numList = s => s.split(/[, ]+/).map(t=>t.trim()).filter(Boolean).map(Number);
+
+/* --- DP helpers (for optimal solution) --- */
+function knapsackDPTable(weights, values, W){
+  const n = weights.length;
+  const V = Array.from({length:n+1},()=>Array(W+1).fill(0));
+  for(let i=1;i<=n;i++){
+    const wi=weights[i-1], vi=values[i-1];
+    for(let k=0;k<=W;k++){
+      if(wi<=k){
+        V[i][k] = Math.max(vi + V[i-1][k-wi], V[i-1][k]);
+      }else{
+        V[i][k] = V[i-1][k];
+      }
+    }
+  }
+  return V;
+}
+function backtrack(V, weights, W){
+  const sel=[]; 
+  let i=weights.length, k=W;
+  while(i>0 && k>=0){
+    if(V[i][k] !== V[i-1][k]){ 
+      sel.push(i); 
+      k -= weights[i-1]; 
+      i--; 
+    }else{
+      i--;
+    }
+  }
+  sel.reverse();      // 1-based indices
+  return sel;
+}
+
+/* --- Greedy by profit --- */
+function greedyByProfit(weights, values, W){
+  const items = weights.map((w,i)=>({ idx:i+1, w, v:values[i] }));
+  items.sort((a,b)=>b.v-a.v); // descending by profit
+
+  let currentW = 0;
+  let currentV = 0;
+  const chosen = [];
+  const log = [];
+
+  log.push("Order (by profit): " + items.map(x=>`#${x.idx}(v=${x.v}, w=${x.w})`).join(", "));
+
+  for(const it of items){
+    if(currentW + it.w <= W){
+      chosen.push(it);
+      currentW += it.w;
+      currentV += it.v;
+      log.push(`take item #${it.idx} → totalW=${currentW}, totalV=${currentV}`);
+    }else{
+      log.push(`skip item #${it.idx} (would exceed capacity)`);
+    }
+  }
+  return {chosen, totalW:currentW, totalV:currentV, log:log.join("\n")};
+}
+
+function runKnapsackGreedy(){
+  const W = +document.getElementById('kgW').value;
+  const vals = numList(document.getElementById('kgVals').value);
+  const wts  = numList(document.getElementById('kgWts').value);
+  const out = document.getElementById('kgOut');
+  out.innerHTML = '';
+
+  if(!(W>0)){
+    out.innerHTML = '<p class="muted">Capacity W must be positive.</p>';
+    return;
+  }
+  if(!vals.length || vals.length !== wts.length){
+    out.innerHTML = '<p class="muted">Provide matching lists of profits and weights.</p>';
+    return;
+  }
+
+  const n = wts.length;
+
+  // Greedy
+  const G = greedyByProfit(wts, vals, W);
+
+  // Optimal via DP
+  const V = knapsackDPTable(wts, vals, W);
+  const optIdx1based = backtrack(V, wts, W);   // 1-based indices
+  const optSet = new Set(optIdx1based);
+  const optItems = optIdx1based.map(i=>({idx:i,w:wts[i-1],v:vals[i-1]}));
+  const optW = optItems.reduce((a,x)=>a+x.w,0);
+  const optV = optItems.reduce((a,x)=>a+x.v,0);
+
+  let html = '<h2>Result</h2>';
+  html += `<p><strong>Capacity W:</strong> ${W}</p>`;
+
+  html += `<p><strong>Items (input):</strong></p>
+    <table class="algo-table">
+      <thead><tr><th>Item</th><th>Profit</th><th>Weight</th></tr></thead><tbody>`;
+  for(let i=0;i<n;i++){
+    html += `<tr><td>${i+1}</td><td>${vals[i]}</td><td>${wts[i]}</td></tr>`;
+  }
+  html += '</tbody></table>';
+
+  html += `<p><strong>Greedy selection:</strong> ${
+    G.chosen.length
+      ? G.chosen.map(it=>`#${it.idx} (w=${it.w}, v=${it.v})`).join(', ')
+      : '— (no item selected)'
+  } &nbsp; ⇒ profit = ${G.totalV}</p>`;
+
+  html += `<p><strong>Optimal (DP) selection:</strong> ${
+    optItems.length
+      ? optItems.map(it=>`#${it.idx} (w=${it.w}, v=${it.v})`).join(', ')
+      : '— (no item selected)'
+  } &nbsp; ⇒ profit = ${optV}</p>`;
+
+  /* ---------- Visualization like the slide ---------- */
+  const maxWeight = Math.max(W, ...wts);
+  const scale = Math.min(10, 260 / Math.max(maxWeight,1)); // pixels per lb
+
+  // 1. Individual item bars
+  html += `<div class="viz-section-title">Item bars</div>`;
+  html += `<div class="viz-row">`;
+
+  for(let i=0;i<n;i++){
+    const height = Math.max(wts[i]*scale, 30);
+    html += `
+      <div class="tower-block">
+        <div class="tower-profit">$${vals[i]}</div>
+        <div class="tower seg-i${i%6}" style="height:${height}px;">
+          <div class="tower-label">${wts[i]} lb</div>
+        </div>
+        <div class="tower-name">item${i+1}</div>
+      </div>`;
+  }
+
+  html += `
+    <div class="tower-block">
+      <div class="tower-profit">&nbsp;</div>
+      <div class="tower tower-knap tower-empty" style="height:${Math.max(W*scale,30)}px;">
+        <div class="tower-label">W = ${W} lb</div>
+      </div>
+      <div class="tower-name">Knapsack</div>
+    </div>
+  </div>`;
+
+  // 2. Greedy vs Optimal packing bars
+  html += `<div class="viz-section-title">Packing comparison</div>`;
+  html += `<div class="viz-row">`;
+
+  // Greedy packing
+  html += `
+    <div class="tower-block">
+      <div class="tower-profit">Greedy = $${G.totalV}</div>
+      <div class="tower" style="height:${Math.max(W*scale,30)}px;">`;
+
+  let greedyUsed = 0;
+  G.chosen.forEach(it=>{
+    const h = Math.max(it.w * scale, 10);
+    greedyUsed += it.w;
+    html += `<div class="tower-seg seg-i${(it.idx-1)%6}" style="height:${h}px;">${it.w} lb</div>`;
+  });
+  if(!G.chosen.length){
+    html += `<div class="tower-seg" style="height:24px;background:#1f2937;color:#e5e7eb;">empty</div>`;
+  }
+  html += `</div>
+      <div class="tower-name">Greedy Solution<br><span class="muted">${greedyUsed} / ${W} lb</span></div>
+    </div>`;
+
+  // Optimal packing
+  html += `
+    <div class="tower-block">
+      <div class="tower-profit">Optimal = $${optV}</div>
+      <div class="tower" style="height:${Math.max(W*scale,30)}px;">`;
+
+  let optUsed = 0;
+  optItems.forEach(it=>{
+    const h = Math.max(it.w * scale, 10);
+    optUsed += it.w;
+    html += `<div class="tower-seg seg-i${(it.idx-1)%6}" style="height:${h}px;">${it.w} lb</div>`;
+  });
+  if(!optItems.length){
+    html += `<div class="tower-seg" style="height:24px;background:#1f2937;color:#e5e7eb;">empty</div>`;
+  }
+  html += `</div>
+      <div class="tower-name">Optimal Solution<br><span class="muted">${optUsed} / ${W} lb</span></div>
+    </div>`;
+
+  html += `</div><!-- /viz-row -->`;
+
+  /* ---- Trace ---- */
+  html += `<p><strong>Greedy steps (trace):</strong></p>
+           <pre class="out">${G.log}</pre>`;
+
+  out.innerHTML = html;
+}
+</script>
+</body>
+</html>

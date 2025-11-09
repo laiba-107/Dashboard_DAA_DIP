@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Coin Change — Dynamic Programming (Minimum Coins)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root{
+    --bg:#0b1220;
+    --panel:#0f172a;
+    --border:#1f2a44;
+    --text:#e5e7eb;
+    --muted:#9aa3b2;
+    --accent:#38bdf8;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",Arial;
+  }
+  header{
+    padding:14px 22px;
+    border-bottom:1px solid var(--border);
+    background:#09101d;
+  }
+  header h1{margin:0;font-size:1.3rem;}
+  header p{margin:4px 0 0;font-size:.9rem;color:var(--muted);}
+  main{max-width:960px;margin:20px auto;padding:0 16px;}
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:14px 16px;
+    margin-bottom:16px;
+  }
+  .card h2{margin:0 0 10px;font-size:1.1rem;}
+  .row{display:grid;grid-template-columns:repeat(12,1fr);gap:10px;margin-bottom:10px;}
+  .col-6{grid-column:span 6}
+  .col-3{grid-column:span 3}
+  .col-12{grid-column:span 12}
+  label{display:block;font-size:.9rem;color:var(--muted);margin-bottom:4px;}
+  input[type="number"],input[type="text"]{
+    width:100%;
+    padding:8px 10px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:#0a1426;
+    color:var(--text);
+    font-size:.95rem;
+  }
+  input:focus{outline:none;border-color:var(--accent);}
+  .btn{
+    appearance:none;
+    border:none;
+    border-radius:10px;
+    padding:9px 14px;
+    cursor:pointer;
+    color:#fff;
+    background:linear-gradient(90deg,#38bdf8,#0ea5e9);
+    font-size:.95rem;
+  }
+  .muted{color:var(--muted);font-size:.88rem;}
+  .algo-table{
+    width:100%;
+    border-collapse:collapse;
+    margin:8px 0 6px;
+    background:#0a1325;
+    font-size:.9rem;
+  }
+  .algo-table thead th{background:#11203a}
+  .algo-table th,.algo-table td{
+    border:1px solid var(--border);
+    padding:6px 8px;
+    text-align:center;
+  }
+  .algo-table tbody tr:nth-child(odd){background:#0b162a}
+  .algo-table tbody tr:nth-child(even){background:#0c182f}
+</style>
+</head>
+<body>
+<header>
+  <h1>Coin Change — Dynamic Programming</h1>
+  <p>Find the minimum number of coins needed to make amount N using given denominations.</p>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Input</h2>
+    <div class="row">
+      <div class="col-6">
+        <label>Coin denominations (comma-separated)</label>
+        <input id="ccCoins" type="text" value="1,2,4,7">
+      </div>
+      <div class="col-3">
+        <label>Amount N</label>
+        <input id="ccN" type="number" value="13" min="0">
+      </div>
+      <div class="col-12">
+        <button class="btn" onclick="runCoinDP()">Run Coin Change (DP)</button>
+        <p class="muted">The DP table m[i][j] shows the minimum coins to make j using first i coin types.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="ccOut">
+    <!-- Output will be injected here -->
+  </section>
+</main>
+
+<script>
+/* ===== Helpers ===== */
+const numList = s => s.split(/[, ]+/).map(t=>t.trim()).filter(Boolean).map(Number);
+
+/* ===== Coin Change DP logic (minimum coins) ===== */
+function computeCoinDP(denoms,N){
+  const n = denoms.length;
+  const m = Array.from({length:n+1},()=>Array(N+1).fill(Infinity));
+  // 0 coins needed to make amount 0
+  for(let i=1;i<=n;i++) m[i][0]=0;
+
+  for(let i=1;i<=n;i++){
+    const coin = denoms[i-1];
+    for(let j=1;j<=N;j++){
+      if(i===1 && j<coin){
+        m[i][j] = Infinity;
+      }else if(i===1){
+        // only first coin type available
+        m[i][j] = 1 + m[i][j-coin];
+      }else if(j<coin){
+        // cannot use this coin (too large)
+        m[i][j] = m[i-1][j];
+      }else{
+        // min( not using this coin, using it at least once )
+        m[i][j] = Math.min(m[i-1][j], 1 + m[i][j-coin]);
+      }
+    }
+  }
+  return m;
+}
+
+function runCoinDP(){
+  const denoms = numList(document.getElementById('ccCoins').value).sort((a,b)=>a-b);
+  const N = +document.getElementById('ccN').value;
+  const out = document.getElementById('ccOut');
+  out.innerHTML='';
+
+  if(!denoms.length){
+    out.innerHTML='<p class="muted">Enter at least one denomination.</p>';
+    return;
+  }
+  if(!Number.isInteger(N) || N<0){
+    out.innerHTML='<p class="muted">Amount N must be an integer ≥ 0.</p>';
+    return;
+  }
+
+  const m = computeCoinDP(denoms,N);
+  const ans = m[denoms.length][N];
+
+  let html = `<p><strong>Denominations:</strong> ${denoms.join(', ')}
+    &nbsp; | &nbsp; <strong>Amount:</strong> ${N}</p>`;
+
+  if(ans === Infinity){
+    html += `<p><strong>Minimum coins needed:</strong> Not possible with these denominations.</p>`;
+  }else{
+    html += `<p><strong>Minimum coins needed:</strong> ${ans}</p>`;
+  }
+
+  // DP table: rows = coin types, columns = amounts
+  html += `<table class="algo-table"><thead><tr><th>Coin \\ Amount</th>`;
+  for(let j=0;j<=N;j++) html += `<th>${j}</th>`;
+  html += `</tr></thead><tbody>`;
+
+  for(let i=1;i<=denoms.length;i++){
+    html += `<tr><th>${denoms[i-1]}</th>`;
+    for(let j=0;j<=N;j++){
+      const v = m[i][j];
+      html += `<td>${v===Infinity ? '∞' : v}</td>`;
+    }
+    html += `</tr>`;
+  }
+  html += `</tbody></table>`;
+
+  out.innerHTML = html;
+}
+</script>
+</body>
+</html>
