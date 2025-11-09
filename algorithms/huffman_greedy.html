@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Huffman Encoding &amp; Decoding — Greedy (Spanning Tree)</title>
+<title>Huffman Encoding & Decoding — Greedy Tree</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script src="https://d3js.org/d3.v7.min.js"></script>
 <style>
   :root{
     --bg:#0b1220;
@@ -14,8 +15,6 @@
     --muted:#9ca3b2;
     --accent:#38bdf8;
     --accent2:#60a5fa;
-    --good:#22c55e;
-    --warn:#facc15;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{
@@ -49,18 +48,7 @@
     font-family:monospace;
     font-size:.9rem;
   }
-  input[type="text"]{
-    width:100%;
-    background:var(--panel2);
-    border:1px solid var(--border);
-    border-radius:8px;
-    color:var(--text);
-    padding:6px 8px;
-    font-family:monospace;
-    font-size:.9rem;
-    margin-top:6px;
-  }
-  .btn-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .btn-row{display:flex;gap:8px;margin-top:8px;}
   button{
     border:none;
     border-radius:999px;
@@ -70,11 +58,6 @@
     background:linear-gradient(135deg,var(--accent),var(--accent2));
     color:#0b1120;
     font-weight:500;
-  }
-  button.secondary{
-    background:var(--panel2);
-    color:var(--text);
-    border:1px solid var(--border);
   }
   .section{
     margin-bottom:16px;
@@ -126,26 +109,10 @@
     border:1px solid var(--border);
     background:var(--panel2);
   }
-  .node-leaf{
-    background:rgba(56,189,248,0.12);
-  }
-  .node-internal{
-    background:rgba(250,204,21,0.10);
-  }
-  .node-symbol{
-    font-weight:600;
-    font-size:.8rem;
-  }
-  .node-freq{
-    font-size:.7rem;
-    color:var(--muted);
-  }
-  .tree-view{
-    font-family:monospace;
-    font-size:.8rem;
-    white-space:pre;
-    margin-top:4px;
-  }
+  .node-leaf{background:rgba(56,189,248,0.15);}
+  .node-internal{background:rgba(250,204,21,0.12);}
+  .node-symbol{font-weight:600;font-size:.8rem;}
+  .node-freq{font-size:.7rem;color:var(--muted);}
   .bitstream{
     font-family:monospace;
     font-size:.85rem;
@@ -153,37 +120,28 @@
   }
   .bit0{color:#38bdf8;}
   .bit1{color:#f97373;}
-  .decoded{
-    font-family:monospace;
-    font-size:.9rem;
-    margin-top:4px;
+  svg{
+    background:#0c1526;
+    border-radius:10px;
+    border:1px solid var(--border);
   }
-  @media(max-width:768px){
+  @media (max-width:768px){
     .layout{grid-template-columns:1fr;}
   }
 </style>
 </head>
 <body>
 <h1>Huffman Encoding &amp; Decoding (Greedy Spanning Tree)</h1>
-<p class="sub">
-  Enter a message (e.g. <code>ACCBAAA</code>).  
-  The algorithm will build the Huffman tree greedily, show the **priority queue / stack**
-  horizontally at each step, and produce codes for encoding &amp; decoding.
-</p>
+<p class="sub">Enter a message (e.g. <code>ACCBAAA</code>). The algorithm will build the Huffman tree greedily, show the priority queue horizontally, and draw a tree like your reference.</p>
 
 <div class="layout">
   <!-- INPUT PANEL -->
   <div class="panel">
     <h2>Input</h2>
-    <p class="help">Message (each character is a symbol):</p>
+    <p class="help">Message:</p>
     <textarea id="msgInput" placeholder="ACCBAAA"></textarea>
-
-    <p class="help" style="margin-top:6px;">Bitstring to decode (optional, use codes from this message):</p>
-    <input type="text" id="decodeInput" placeholder="e.g. 101001..." />
-
     <div class="btn-row">
-      <button onclick="runHuffmanGreedy()">Build Huffman (Greedy)</button>
-      <button class="secondary" onclick="decodeCustomBitstring()">Decode Bitstring</button>
+      <button onclick="runHuffmanGreedy()">Build Huffman Tree</button>
     </div>
   </div>
 
@@ -197,50 +155,37 @@
 /* ---------- Helpers ---------- */
 function escapeHTML(str){
   return String(str).replace(/[&<>"']/g, m =>
-    ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m])
+    ({"&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;","'":"&#039;"}[m] || m)
   );
 }
-
-/* ---------- Core Huffman (Greedy) ---------- */
-
 function buildFreqMap(msg){
   const map={};
-  for(const ch of msg){
-    map[ch]=(map[ch]||0)+1;
-  }
+  for(const ch of msg){map[ch]=(map[ch]||0)+1;}
   return map;
 }
 
+/* ---------- Huffman (Greedy) ---------- */
 // Node: {id, symbol, freq, left, right}
 function buildHuffmanTreeGreedy(freqMap){
-  const symbols=Object.keys(freqMap);
+  const symbols = Object.keys(freqMap);
   if(symbols.length < 2){
     throw new Error("Need at least two distinct symbols for Huffman coding.");
   }
 
-  // initial nodes
-  const nodes=[];
-  let nextId=0;
+  const nodes = [];
+  let nextId = 0;
   for(const s of symbols){
     nodes.push({id:nextId++, symbol:s, freq:freqMap[s], left:null, right:null});
   }
 
-  const historyStates=[]; // each state is list of nodes (priority queue snapshot)
-
+  const historyStates = [];
   let active = nodes.slice();
-  // record initial state
-  historyStates.push(cloneActiveState(active));
+  historyStates.push(cloneState(active));
 
-  // main greedy loop
   while(active.length > 1){
-    // sort ascending by frequency, tie-break by symbol or id
     active.sort((a,b)=> a.freq-b.freq || (a.symbol||"").localeCompare(b.symbol||""));
-
-    // take two min
     const n1 = active.shift();
     const n2 = active.shift();
-
-    // merge into internal node
     const merged = {
       id: nextId++,
       symbol: null,
@@ -248,91 +193,62 @@ function buildHuffmanTreeGreedy(freqMap){
       left: n1,
       right: n2
     };
-
     active.push(merged);
-
-    // record state AFTER inserting merged node
-    historyStates.push(cloneActiveState(active));
+    historyStates.push(cloneState(active));
   }
 
-  const root = active[0];
-  return { root, historyStates, symbols };
+  return { root: active[0], historyStates, symbols };
 }
-
-function cloneActiveState(active){
-  // Only keep minimal info for visualization
+function cloneState(active){
   return active.map(n => ({
-    id:n.id,
-    symbol:n.symbol,
-    freq:n.freq,
-    isLeaf:n.symbol != null
+    id:n.id, symbol:n.symbol, freq:n.freq, isLeaf:n.symbol!=null
   }));
 }
 
-/* Build code table from tree */
 function buildCodes(root){
   const codes={};
-  function dfs(node,path){
-    if(!node) return;
-    if(node.symbol != null){
-      codes[node.symbol] = path || "0"; // handle single-symbol edge case
+  (function dfs(node,path){
+    if(!node)return;
+    if(node.symbol!=null){
+      codes[node.symbol]=path || "0";
       return;
     }
-    dfs(node.left,  path + "0");
-    dfs(node.right, path + "1");
-  }
-  dfs(root,"");
+    dfs(node.left,  path+"0");
+    dfs(node.right, path+"1");
+  })(root,"");
   return codes;
 }
 
-/* Decode a bitstring using the tree */
-function decodeBitsWithTree(bitstring, root){
-  const result=[];
-  let node=root;
-  for(const b of bitstring){
-    if(b!=="0" && b!=="1") continue; // ignore spaces etc.
+function decodeBits(root, bits){
+  let node=root, res="";
+  for(const b of bits){
+    if(b!=="0"&&b!=="1") continue;
     node = (b==="0") ? node.left : node.right;
-    if(!node) throw new Error("Bitstring does not match this Huffman tree.");
-    if(node.symbol != null){
-      result.push(node.symbol);
+    if(!node) throw new Error("Bitstring does not match this tree.");
+    if(node.symbol!=null){
+      res += node.symbol;
       node = root;
     }
-  }
-  return result.join("");
-}
-
-/* Produce a simple text-based tree visualization */
-function renderTree(node, prefix="", isLeft=true){
-  if(!node) return "";
-  const label = (node.symbol != null) ? `${node.symbol} (${node.freq})` : `• (${node.freq})`;
-  let res = prefix + (prefix === "" ? "" : (isLeft ? "├─ " : "└─ ")) + label + "\n";
-  const nextPrefix = prefix + (prefix === "" ? "" : (isLeft ? "│  " : "   "));
-  if(node.left || node.right){
-    res += renderTree(node.left,  nextPrefix, true);
-    res += renderTree(node.right, nextPrefix, false);
   }
   return res;
 }
 
-/* ---------- Rendering ---------- */
-
-/* Stack / priority queue evolution */
+/* ---------- Render Priority Queue ---------- */
 function renderStackHistory(historyStates){
   let html = `<div class="section">
-    <div class="section-title">Greedy Priority Queue (Stack) Evolution</div>
-    <p class="help">Each row shows the queue after one greedy step (sorted by frequency). Boxes are shown horizontally.</p>
+    <div class="section-title">Priority Queue (Greedy Steps)</div>
+    <p class="help">Each row shows the queue after a step, from smallest frequency to largest.</p>
     <div class="stack-steps">`;
 
   historyStates.forEach((state, idx) => {
     html += `<div class="stack-row">
       <div class="stack-label">Step ${idx}</div>`;
-    // sort ascending frequency for display
-    const sorted = state.slice().sort((a,b)=>a.freq-b.freq || (a.symbol||"").localeCompare(b.symbol||""));
-    sorted.forEach(node => {
-      const cls = node.isLeaf ? "node-box node-leaf" : "node-box node-internal";
-      const sym = node.isLeaf ? node.symbol : "--"; // internal nodes as "--"
-      html += `<div class="${cls}">
-        <div class="node-symbol">${escapeHTML(sym)}</div>
+    const sorted = state.slice().sort((a,b)=>a.freq-b.freq||(a.symbol||"").localeCompare(b.symbol||""));
+    sorted.forEach(node=>{
+      const cls = node.isLeaf ? "node-leaf" : "node-internal";
+      const label = node.isLeaf ? node.symbol : "--";
+      html += `<div class="node-box ${cls}">
+        <div class="node-symbol">${escapeHTML(label)}</div>
         <div class="node-freq">${node.freq}</div>
       </div>`;
     });
@@ -343,40 +259,120 @@ function renderStackHistory(historyStates){
   return html;
 }
 
+/* ---------- D3 Tree Visualization ---------- */
+function drawTree(root){
+  const width  = 700;
+  const height = 420;
+
+  const svg = d3.select("#treeSvg")
+    .attr("width", width)
+    .attr("height", height)
+    .attr("viewBox", [0, 0, width, height]);
+
+  svg.selectAll("*").remove();
+
+  const g = svg.append("g")
+    .attr("transform", "translate(20,40)");
+
+  // IMPORTANT: tell d3.hierarchy how to get children (left/right)
+  const rootHierarchy = d3.hierarchy(
+    root,
+    d => {
+      const children = [];
+      if (d.left)  children.push(d.left);
+      if (d.right) children.push(d.right);
+      return children.length ? children : null;
+    }
+  );
+
+  const treeLayout = d3.tree().size([width - 80, height - 100]);
+  treeLayout(rootHierarchy);
+
+  // draw links
+  g.selectAll(".link")
+    .data(rootHierarchy.links())
+    .join("path")
+    .attr("class", "link")
+    .attr("fill", "none")
+    .attr("stroke", "#000000")
+    .attr("stroke-width", 2)
+    .attr("d", d3.linkVertical()
+      .x(d => d.x)
+      .y(d => d.y)
+    );
+
+  // edge labels 0 / 1
+  g.selectAll(".edge-label")
+    .data(rootHierarchy.links())
+    .join("text")
+    .attr("class", "edge-label")
+    .attr("x", d => (d.source.x + d.target.x) / 2)
+    .attr("y", d => (d.source.y + d.target.y) / 2 - 4)
+    .attr("text-anchor", "middle")
+    .attr("font-size", "11px")
+    .attr("fill", "#ef4444")
+    .text(d => {
+      const parent = d.source.data;
+      const child  = d.target.data;
+      return parent.left === child ? "0" : "1";
+    });
+
+  // nodes
+  const node = g.selectAll(".node")
+    .data(rootHierarchy.descendants())
+    .join("g")
+    .attr("class", "node")
+    .attr("transform", d => `translate(${d.x},${d.y})`);
+
+  node.append("circle")
+    .attr("r", 18)
+    .attr("fill", "#e9d5ff")   // light purple
+    .attr("stroke", "#000000")
+    .attr("stroke-width", 1.5);
+
+  // frequency inside circle
+  node.append("text")
+    .attr("text-anchor", "middle")
+    .attr("dy", "4")
+    .attr("font-size", "12px")
+    .attr("fill", "#000000")
+    .text(d => d.data.freq);
+
+  // symbol under leaf nodes
+  node.filter(d => d.data.symbol != null)
+    .append("text")
+    .attr("text-anchor", "middle")
+    .attr("dy", "32")
+    .attr("font-size", "12px")
+    .attr("fill", "#000000")
+    .text(d => d.data.symbol);
+}
+
+/* ---------- MAIN ENTRY ---------- */
 function runHuffmanGreedy(){
-  const out = document.getElementById("output");
+  const outDiv = document.getElementById("output");
   const msg = document.getElementById("msgInput").value.trim();
 
   if(!msg){
-    out.innerHTML = `<p class="help">Please enter a message first (e.g. ACCBAAA).</p>`;
+    outDiv.innerHTML = `<p class="help">Please enter a message first (e.g. ACCBAAA).</p>`;
     return;
   }
 
-  // 1) Frequency map
-  const freqMap = buildFreqMap(msg);
-
   try{
-    // 2) Build tree with greedy algorithm (spanning tree style)
+    const freqMap = buildFreqMap(msg);
     const { root, historyStates, symbols } = buildHuffmanTreeGreedy(freqMap);
-
-    // 3) Codes
     const codes = buildCodes(root);
 
-    // 4) Encode message
+    // encode & decode
     let bitstream = "";
-    for(const ch of msg){
-      bitstream += codes[ch];
-    }
+    for(const ch of msg) bitstream += codes[ch];
+    const decoded = decodeBits(root, bitstream);
 
-    // 5) Decode bitstream back
-    const decoded = decodeBitsWithTree(bitstream, root);
-
-    // ----- Render sections -----
     let html = "";
 
-    // Frequencies and codes table
+    // Frequencies & codes
     html += `<div class="section">
-      <div class="section-title">Character Frequencies &amp; Codes</div>
+      <div class="section-title">Character Frequencies &amp; Huffman Codes</div>
       <table>
         <thead><tr><th>Character</th><th>Frequency</th><th>Code</th></tr></thead>
         <tbody>`;
@@ -389,64 +385,34 @@ function runHuffmanGreedy(){
     });
     html += `</tbody></table></div>`;
 
-    // Stack / priority queue evolution
+    // Stack evolution
     html += renderStackHistory(historyStates);
 
-    // Tree view
+    // Tree SVG container
     html += `<div class="section">
-      <div class="section-title">Huffman Tree (Greedy Spanning Tree)</div>
-      <pre class="tree-view">${escapeHTML(renderTree(root))}</pre>
+      <div class="section-title">Huffman Tree (like your example)</div>
+      <svg id="treeSvg"></svg>
     </div>`;
 
-    // Encoding / decoding
+    // Encoding / decoding summary
     const colouredBits = bitstream.split("").map(b =>
-      b==="0" ? `<span class="bit0">0</span>` : `<span class="bit1">1</span>`
+      b === "0" ? `<span class="bit0">0</span>` : `<span class="bit1">1</span>`
     ).join("");
-
     html += `<div class="section">
       <div class="section-title">Encoding &amp; Decoding</div>
-      <p class="help"><strong>Original message:</strong> ${escapeHTML(msg)}</p>
+      <p class="help"><strong>Message:</strong> ${escapeHTML(msg)}</p>
       <p class="help"><strong>Encoded bitstream:</strong></p>
       <p class="bitstream">${colouredBits}</p>
-      <p class="help"><strong>Decoded back:</strong></p>
-      <div class="decoded">${escapeHTML(decoded)}</div>
+      <p class="help"><strong>Decoded message:</strong> ${escapeHTML(decoded)}</p>
     </div>`;
 
-    out.innerHTML = html;
+    outDiv.innerHTML = html;
 
-    // store last tree & codes for manual decoding
-    window.__lastHuffmanRoot = root;
-    window.__lastHuffmanCodes = codes;
-  }catch(e){
-    out.innerHTML = `<p class="help">Error: ${escapeHTML(e.message)}</p>`;
-  }
-}
+    // Draw the tree to match the screenshot style
+    drawTree(root);
 
-function decodeCustomBitstring(){
-  const out = document.getElementById("output");
-  const bits = document.getElementById("decodeInput").value.trim();
-  const root = window.__lastHuffmanRoot;
-
-  if(!root){
-    out.innerHTML = `<p class="help">Please run "Build Huffman (Greedy)" at least once so I know the tree.</p>`;
-    return;
-  }
-  if(!bits){
-    out.innerHTML = `<p class="help">Enter a bitstring to decode.</p>`;
-    return;
-  }
-
-  try{
-    const decoded = decodeBitsWithTree(bits, root);
-    out.innerHTML = `<div class="section">
-      <div class="section-title">Decoded Bitstring</div>
-      <div class="decoded">
-        Bitstring: ${escapeHTML(bits)}<br/>
-        Decoded message: ${escapeHTML(decoded)}
-      </div>
-    </div>`;
-  }catch(e){
-    out.innerHTML = `<p class="help">Error while decoding: ${escapeHTML(e.message)}</p>`;
+  }catch(err){
+    outDiv.innerHTML = `<p class="help">Error: ${escapeHTML(err.message)}</p>`;
   }
 }
 </script>
