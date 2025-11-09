@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Brute Force — TSP with Tree</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- D3.js for tree visualization -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #020617;
+      --panel: #02091a;
+      --panel2: #020b1f;
+      --border: #1e293b;
+      --accent: #38bdf8;
+      --accent2: #a855f7;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --good: #22c55e;
+      --danger: #f97373;
+      --shadow-soft: 0 18px 40px rgba(15,23,42,0.85);
+      --radius-xl: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, Ubuntu, "Helvetica Neue", Arial, sans-serif;
+      background: radial-gradient(circle at top, #020617 0, #020617 40%, #000 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(90deg, #020617, #020617 40%, #020818);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    header h1 span.logo {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, #38bdf8, #0f172a 70%);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      color: white;
+      box-shadow: 0 0 0 1px rgba(148,163,184,0.35);
+    }
+
+    header .subtitle {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.7);
+      font-size: 0.74rem;
+      color: var(--muted);
+      background: rgba(15,23,42,0.85);
+    }
+
+    .pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 3px rgba(56,189,248,0.35);
+    }
+
+    main {
+      flex: 1;
+      padding: 18px 20px 24px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.1fr 1.1fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 1024px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: radial-gradient(circle at top left, #020b1f, #020617 55%);
+      border-radius: var(--radius-xl);
+      border: 1px solid rgba(30,41,59,0.9);
+      box-shadow: var(--shadow-soft);
+      padding: 16px 16px 18px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background:
+        radial-gradient(circle at 0 0, rgba(56,189,248,0.08), transparent 55%),
+        radial-gradient(circle at 100% 0, rgba(168,85,247,0.08), transparent 55%);
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .card-inner { position: relative; z-index: 1; }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title-badge {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      color: var(--muted);
+    }
+
+    .card-description {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    input[type="number"] {
+      background: rgba(15,23,42,0.85);
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.5);
+      color: var(--text);
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      outline: none;
+      min-width: 80px;
+    }
+
+    input[type="number"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(56,189,248,0.35);
+    }
+
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    button {
+      border-radius: 999px;
+      border: 1px solid rgba(56,189,248,0.6);
+      background: radial-gradient(circle at 20% 0, #38bdf8, #0f172a 70%);
+      color: white;
+      padding: 6px 13px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+      box-shadow: 0 6px 20px rgba(15,23,42,0.85);
+      white-space: nowrap;
+    }
+
+    button.secondary {
+      background: rgba(15,23,42,0.85);
+      border-color: rgba(148,163,184,0.9);
+      color: var(--muted);
+      box-shadow: none;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 30px rgba(15,23,42,0.88);
+    }
+
+    button.secondary:hover {
+      box-shadow: 0 8px 20px rgba(15,23,42,0.85);
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: default;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .matrix-container {
+      border-radius: 16px;
+      border: 1px dashed rgba(148,163,184,0.6);
+      padding: 10px;
+      background: radial-gradient(circle at top, rgba(15,23,42,0.9), rgba(2,6,23,0.95));
+      overflow-x: auto;
+    }
+
+    .matrix-table {
+      border-collapse: collapse;
+      font-size: 0.78rem;
+      min-width: 100%;
+    }
+
+    .matrix-table th,
+    .matrix-table td {
+      border: 1px solid rgba(30,64,175,0.7);
+      padding: 4px 7px;
+      text-align: center;
+      min-width: 32px;
+    }
+
+    .matrix-table th {
+      background: linear-gradient(90deg, rgba(37,99,235,0.35), rgba(30,64,175,0.7));
+      color: #e5e7eb;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .matrix-table td {
+      background: rgba(15,23,42,0.9);
+      color: #e5e7eb;
+    }
+
+    .matrix-table td.diagonal {
+      background: rgba(15,23,42,0.4);
+      color: rgba(148,163,184,0.7);
+    }
+
+    .matrix-table td.inf {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .matrix-input-table input {
+      width: 56px;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      text-align: center;
+      font-size: 0.78rem;
+      padding: 3px;
+      outline: none;
+    }
+
+    .matrix-input-table td {
+      padding: 2px 4px;
+    }
+
+    .matrix-input-table input:focus {
+      background: rgba(30,64,175,0.65);
+      border-radius: 8px;
+    }
+
+    .matrix-caption {
+      font-size: 0.76rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .results-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 6px;
+      font-size: 0.8rem;
+    }
+
+    .tag {
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      border: 1px solid rgba(148,163,184,0.7);
+      color: var(--muted);
+      background: rgba(15,23,42,0.8);
+    }
+
+    .tag.good {
+      border-color: rgba(34,197,94,0.8);
+      color: var(--good);
+      background: rgba(22,163,74,0.08);
+    }
+
+    .tag.bad {
+      border-color: rgba(248,113,113,0.8);
+      color: var(--danger);
+      background: rgba(248,113,113,0.06);
+    }
+
+    /* Tree */
+    #treeContainer {
+      border-radius: 16px;
+      border: 1px dashed rgba(148,163,184,0.6);
+      background: radial-gradient(circle at top, rgba(15,23,42,0.9), rgba(2,6,23,0.95));
+      padding: 4px 4px 10px;
+      height: 260px;
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 10px;
+    }
+
+    #treeSvg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .tree-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 4px;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .tree-legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tree-node-circle {
+      stroke-width: 1.2px;
+    }
+
+    .tree-node-label {
+      font-size: 10px;
+      fill: #e5e7eb;
+      paint-order: stroke;
+      stroke: rgba(15,23,42,0.95);
+      stroke-width: 3px;
+      stroke-linejoin: round;
+    }
+
+    .tree-link {
+      fill: none;
+      stroke-width: 1.1px;
+    }
+
+    .tree-edge-label {
+      font-size: 9px;
+      fill: #cbd5f5;
+      paint-order: stroke;
+      stroke: rgba(15,23,42,0.95);
+      stroke-width: 2px;
+    }
+
+    .tour-table-container {
+      border-radius: 16px;
+      border: 1px dashed rgba(148,163,184,0.6);
+      padding: 10px;
+      background: radial-gradient(circle at top, rgba(15,23,42,0.9), rgba(2,6,23,0.95));
+      overflow-y: auto;
+      max-height: 240px;
+    }
+
+    .tour-table {
+      border-collapse: collapse;
+      font-size: 0.78rem;
+      width: 100%;
+    }
+
+    .tour-table th,
+    .tour-table td {
+      border: 1px solid rgba(30,64,175,0.7);
+      padding: 4px 7px;
+      text-align: left;
+    }
+
+    .tour-table th {
+      background: linear-gradient(90deg, rgba(37,99,235,0.35), rgba(30,64,175,0.7));
+      color: #e5e7eb;
+    }
+
+    .tour-table td.feasible-yes {
+      color: var(--good);
+    }
+
+    .tour-table td.feasible-no {
+      color: var(--danger);
+    }
+
+    footer {
+      font-size: 0.7rem;
+      color: var(--muted);
+      padding: 6px 18px 10px;
+      text-align: right;
+      border-top: 1px solid rgba(15,23,42,0.9);
+      background: rgba(2,6,23,0.98);
+    }
+  </style>
+</head>
+
+<body>
+<header>
+  <div>
+    <h1>
+      <span class="logo">T</span>
+      Brute Force — TSP
+    </h1>
+    <div class="subtitle">
+      Try all possible tours starting from city 1, then pick the best. Tree shows all paths.
+    </div>
+  </div>
+  <div class="pill">
+    <span class="pill-dot"></span>
+    <span>Brute force · Complexity (n−1)!</span>
+  </div>
+</header>
+
+<main>
+  <div class="layout">
+    <!-- LEFT: Matrix input and basic info -->
+    <section class="card">
+      <div class="card-inner">
+        <div class="card-header">
+          <div class="card-title">
+            TSP Input Matrix
+            <span class="card-title-badge">Brute Force</span>
+          </div>
+        </div>
+        <p class="card-description">
+          1) Choose number of cities.  
+          2) Click <strong>“Generate matrix”</strong>.  
+          3) Fill in costs (leave blank for ∞). Diagonal (1–1, 2–2, …) is ∞.  
+          4) Click <strong>“Run brute force”</strong>. Start city is fixed as 1.
+        </p>
+
+        <div class="controls-row">
+          <div>
+            <label for="cityCount">Number of cities (3–9, but keep ≤ 7 for readable tree)</label>
+            <input type="number" id="cityCount" min="3" max="9" value="4" />
+          </div>
+          <button id="generateMatrixBtn">
+            ⚙️ Generate matrix
+          </button>
+          <button id="solveBtn" disabled>
+            🔍 Run brute force
+          </button>
+        </div>
+
+        <div id="matrixInputWrapper" class="matrix-container" style="margin-top:8px; display:none;">
+          <div class="matrix-caption">
+            Cost from city <strong>i</strong> (row) to city <strong>j</strong> (column).  
+            Diagonal (1–1, 2–2, …) is fixed to <strong>∞</strong> (no self-loop).  
+            Empty/invalid cells are treated as <em>∞</em>. i and j start from 1.
+          </div>
+          <div id="matrixInputArea"></div>
+        </div>
+
+        <div class="results-summary" id="resultsSummary" style="display:none;">
+          <span class="tag good" id="bestCostTag"></span>
+          <span class="tag" id="bestPathTag"></span>
+          <span class="tag" id="permsTag"></span>
+          <span class="tag bad" id="infeasibleTag"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: Tree + tours table -->
+    <section class="card">
+      <div class="card-inner">
+        <div class="card-header">
+          <div class="card-title">
+            Brute Force Search Tree &amp; Tours
+            <span class="card-title-badge">Visualization</span>
+          </div>
+        </div>
+        <p class="card-description">
+          Tree shows all partial paths explored by brute force (no pruning).  
+          Leaves are complete tours 1 → … → 1. The best tour leaf is highlighted.
+        </p>
+
+        <div class="tree-legend">
+          <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="#020617" stroke="#38bdf8" stroke-width="1.2"/></svg> Internal / partial path</span>
+          <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="#22c55e" stroke="#4ade80" stroke-width="1.2"/></svg> Feasible full tour</span>
+          <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="#111827" stroke="#f97373" stroke-width="1.2"/></svg> Infeasible (contains ∞)</span>
+          <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="#facc15" stroke="#fbbf24" stroke-width="1.2"/></svg> Best tour</span>
+        </div>
+
+        <div id="treeContainer">
+          <svg id="treeSvg"></svg>
+        </div>
+
+        <div class="tour-table-container">
+          <table class="tour-table" id="tourTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Tour (1-based, incl. return)</th>
+                <th>Cost</th>
+                <th>Feasible?</th>
+              </tr>
+            </thead>
+            <tbody id="tourTableBody">
+              <!-- rows added by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  Brute force tries all permutations of {2,3,...,n} with fixed start city 1, evaluates every tour, then chooses the minimum.
+</footer>
+
+<script>
+(function() {
+  const generateBtn = document.getElementById("generateMatrixBtn");
+  const solveBtn = document.getElementById("solveBtn");
+  const cityCountInput = document.getElementById("cityCount");
+  const matrixInputWrapper = document.getElementById("matrixInputWrapper");
+  const matrixInputArea = document.getElementById("matrixInputArea");
+
+  const resultsSummary = document.getElementById("resultsSummary");
+  const bestCostTag = document.getElementById("bestCostTag");
+  const bestPathTag = document.getElementById("bestPathTag");
+  const permsTag = document.getElementById("permsTag");
+  const infeasibleTag = document.getElementById("infeasibleTag");
+
+  const tourTableBody = document.getElementById("tourTableBody");
+
+  let treeNodesGlobal = [];
+  let bestLeafIdGlobal = null;
+
+  generateBtn.addEventListener("click", () => {
+    const n = parseInt(cityCountInput.value, 10);
+    if (isNaN(n) || n < 3 || n > 9) {
+      alert("Please choose a city count between 3 and 9.");
+      return;
+    }
+    buildMatrixInput(n);
+    resultsSummary.style.display = "none";
+    tourTableBody.innerHTML = "";
+    clearTree();
+    solveBtn.disabled = false;
+  });
+
+  solveBtn.addEventListener("click", () => {
+    const matrix = readMatrixFromInputs();
+    if (!matrix) return;
+
+    const result = bruteForceTSPWithTree(matrix);
+
+    if (result.bestPath && isFinite(result.bestCost)) {
+      bestCostTag.textContent = `Best tour cost = ${result.bestCost}`;
+      const displayPath = result.bestPath.map(i => i + 1).join(" → ");
+      bestPathTag.textContent = `Best tour = ${displayPath}`;
+    } else {
+      bestCostTag.textContent = "Best tour cost = ∞ (no Hamiltonian cycle)";
+      bestPathTag.textContent = "Best tour = No Hamiltonian cycle";
+    }
+
+    permsTag.textContent = `Permutations checked = ${result.permutationsChecked}`;
+    infeasibleTag.textContent = `Infeasible tours (∞ edges) = ${result.infeasibleCount}`;
+    resultsSummary.style.display = "flex";
+
+    treeNodesGlobal = result.treeNodes;
+    bestLeafIdGlobal = result.bestLeafId;
+    renderTree(treeNodesGlobal, bestLeafIdGlobal);
+
+    renderToursTable(result.tours);
+  });
+
+  function buildMatrixInput(n) {
+    matrixInputWrapper.style.display = "block";
+    const table = document.createElement("table");
+    table.className = "matrix-table matrix-input-table";
+
+    const thead = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+    const corner = document.createElement("th");
+    corner.textContent = "i \\ j";
+    headerRow.appendChild(corner);
+
+    for (let j = 0; j < n; j++) {
+      const th = document.createElement("th");
+      th.textContent = j + 1; // 1-based
+      headerRow.appendChild(th);
+    }
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    for (let i = 0; i < n; i++) {
+      const tr = document.createElement("tr");
+      const th = document.createElement("th");
+      th.textContent = i + 1; // 1-based
+      tr.appendChild(th);
+
+      for (let j = 0; j < n; j++) {
+        const td = document.createElement("td");
+        if (i === j) {
+          td.classList.add("diagonal", "inf");
+          const span = document.createElement("span");
+          span.textContent = "∞";
+          td.appendChild(span);
+        } else {
+          const input = document.createElement("input");
+          input.type = "number";
+          input.placeholder = "∞";
+          input.step = "any";
+          input.min = "0";
+          td.appendChild(input);
+        }
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+
+    matrixInputArea.innerHTML = "";
+    matrixInputArea.appendChild(table);
+  }
+
+  function readMatrixFromInputs() {
+    const table = matrixInputArea.querySelector("table");
+    if (!table) return null;
+
+    const rows = table.querySelectorAll("tbody tr");
+    const n = rows.length;
+    const matrix = Array.from({ length: n }, () => Array(n).fill(Infinity));
+
+    for (let i = 0; i < n; i++) {
+      const cells = rows[i].querySelectorAll("td");
+      for (let j = 0; j < n; j++) {
+        if (i === j) {
+          matrix[i][j] = Infinity; // diagonal = ∞
+          continue;
+        }
+        const input = cells[j].querySelector("input");
+        const value = input ? input.value.trim() : "";
+        if (!value) {
+          matrix[i][j] = Infinity;
+        } else {
+          const num = parseFloat(value);
+          if (isNaN(num) || num < 0) {
+            alert(`Invalid cost at cell (i=${i + 1}, j=${j + 1}). Enter a non-negative number or leave blank for ∞.`);
+            return null;
+          }
+          matrix[i][j] = num;
+        }
+      }
+    }
+    return matrix;
+  }
+
+  // ---- Brute-force TSP with tree recording ----
+  function bruteForceTSPWithTree(matrix) {
+    const n = matrix.length;
+    const cities = [];
+    for (let i = 1; i < n; i++) cities.push(i); // remaining cities, start fixed at 0
+
+    let bestCost = Infinity;
+    let bestPath = null;
+    let bestLeafId = null;
+
+    let permutationsChecked = 0;
+    let infeasibleCount = 0;
+    const tours = [];
+
+    const treeNodes = [];
+    let nextId = 0;
+
+    function dfs(path, costSoFar, parentId, edgeFromParent) {
+      const id = nextId++;
+      const pathStr = path.map(x => x + 1).join("→");
+      const node = {
+        id,
+        parentId,
+        pathStr,
+        cost: costSoFar,
+        edgeCost: edgeFromParent,
+        type: "internal",
+        tourCost: null,
+        feasible: null
+      };
+      treeNodes.push(node);
+
+      if (path.length === n) {
+        // complete assignment of cities; now add return to city 0
+        permutationsChecked++;
+        const last = path[path.length - 1];
+        const backCost = matrix[last][0];
+        let totalCost, feasible;
+        if (!isFinite(backCost) || !isFinite(costSoFar)) {
+          totalCost = Infinity;
+          feasible = false;
+          infeasibleCount++;
+        } else {
+          totalCost = costSoFar + backCost;
+          feasible = true;
+          if (totalCost < bestCost) {
+            bestCost = totalCost;
+            bestPath = path.slice();
+            bestPath.push(0); // add return
+            bestLeafId = id;
+          }
+        }
+        node.type = feasible ? "leaf-feasible" : "leaf-infeasible";
+        node.tourCost = totalCost;
+        node.feasible = feasible;
+
+        tours.push({
+          tour: [...path, 0],
+          cost: totalCost,
+          feasible
+        });
+
+        return;
+      }
+
+      // still partial path
+      node.type = "internal";
+      node.tourCost = null;
+      node.feasible = null;
+
+      const last = path[path.length - 1];
+
+      for (let next = 1; next < n; next++) {
+        if (path.includes(next)) continue;
+        const edgeCost = matrix[last][next];
+        const newCost = (!isFinite(costSoFar) || !isFinite(edgeCost))
+          ? Infinity
+          : costSoFar + edgeCost;
+        dfs([...path, next], newCost, id, edgeCost);
+      }
+    }
+
+    // start from city 0 (city 1 in 1-based)
+    dfs([0], 0, null, null);
+
+    return {
+      bestCost,
+      bestPath,
+      permutationsChecked,
+      infeasibleCount,
+      tours,
+      treeNodes,
+      bestLeafId
+    };
+  }
+
+  function renderToursTable(tours) {
+    tourTableBody.innerHTML = "";
+    if (!tours || tours.length === 0) return;
+
+    const maxRows = 250;
+    const len = Math.min(maxRows, tours.length);
+
+    for (let i = 0; i < len; i++) {
+      const t = tours[i];
+      const tr = document.createElement("tr");
+
+      const idxTd = document.createElement("td");
+      idxTd.textContent = i + 1;
+
+      const tourTd = document.createElement("td");
+      const displayTour = t.tour.map(x => x + 1).join(" → ");
+      tourTd.textContent = displayTour;
+
+      const costTd = document.createElement("td");
+      costTd.textContent = isFinite(t.cost) ? t.cost : "∞";
+
+      const feasTd = document.createElement("td");
+      if (t.feasible) {
+        feasTd.textContent = "Yes";
+        feasTd.classList.add("feasible-yes");
+      } else {
+        feasTd.textContent = "No (contains ∞)";
+        feasTd.classList.add("feasible-no");
+      }
+
+      tr.appendChild(idxTd);
+      tr.appendChild(tourTd);
+      tr.appendChild(costTd);
+      tr.appendChild(feasTd);
+      tourTableBody.appendChild(tr);
+    }
+
+    if (tours.length > maxRows) {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 4;
+      td.textContent = `… (${tours.length - maxRows} more tours omitted for display)`;
+      td.style.fontStyle = "italic";
+      td.style.color = "#9ca3af";
+      tr.appendChild(td);
+      tourTableBody.appendChild(tr);
+    }
+  }
+
+  // ---- D3 tree rendering ----
+  function renderTree(nodes, bestLeafId) {
+    const svg = d3.select("#treeSvg");
+    svg.selectAll("*").remove();
+
+    if (!nodes || nodes.length === 0) return;
+
+    const nodeMap = new Map();
+    nodes.forEach(n => {
+      nodeMap.set(n.id, Object.assign({ children: [] }, n));
+    });
+
+    let root = null;
+    nodeMap.forEach(n => {
+      if (n.parentId == null) {
+        root = n;
+      } else {
+        const parent = nodeMap.get(n.parentId);
+        if (parent) parent.children.push(n);
+      }
+    });
+
+    if (!root) return;
+
+    const width = document.getElementById("treeContainer").clientWidth;
+    const height = document.getElementById("treeContainer").clientHeight;
+
+    svg.attr("width", width).attr("height", height);
+
+    const rootHierarchy = d3.hierarchy(root);
+    const treeLayout = d3.tree().size([height - 40, width - 80]);
+    treeLayout(rootHierarchy);
+
+    // Links + edge labels
+    const linkGroup = svg.append("g")
+      .selectAll("g")
+      .data(rootHierarchy.links())
+      .enter()
+      .append("g");
+
+    linkGroup.append("path")
+      .attr("class", "tree-link")
+      .attr("d", d3.linkHorizontal()
+        .x(d => d.y + 40)
+        .y(d => d.x + 20)
+      )
+      .attr("stroke", d => {
+        const t = d.target.data.type;
+        if (t === "leaf-feasible") return "#4ade80";
+        if (t === "leaf-infeasible") return "#f97373";
+        return "rgba(148,163,184,0.9)";
+      })
+      .attr("opacity", 0.85);
+
+    // Edge labels: cost for that move
+    linkGroup.append("text")
+      .attr("class", "tree-edge-label")
+      .attr("text-anchor", "middle")
+      .each(function(d) {
+        const edgeCost = d.target.data.edgeCost;
+        if (!isFinite(edgeCost) || edgeCost == null) return;
+        const midX = (d.source.x + d.target.x) / 2 + 20;
+        const midY = (d.source.y + d.target.y) / 2 + 40;
+        d3.select(this)
+          .attr("x", midY)
+          .attr("y", midX - 4)
+          .text(edgeCost);
+      });
+
+    const nodeGroup = svg.append("g")
+      .selectAll("g")
+      .data(rootHierarchy.descendants())
+      .enter()
+      .append("g")
+      .attr("transform", d => `translate(${d.y + 40}, ${d.x + 20})`);
+
+    nodeGroup.append("circle")
+      .attr("r", 8)
+      .attr("class", "tree-node-circle")
+      .attr("fill", d => {
+        if (d.data.id === bestLeafId && d.data.type === "leaf-feasible") return "#facc15";
+        const t = d.data.type;
+        if (t === "leaf-feasible") return "#22c55e";
+        if (t === "leaf-infeasible") return "#111827";
+        return "rgba(15,23,42,0.95)"; // internal/root
+      })
+      .attr("stroke", d => {
+        if (d.data.id === bestLeafId && d.data.type === "leaf-feasible") return "#fbbf24";
+        const t = d.data.type;
+        if (t === "leaf-feasible") return "#4ade80";
+        if (t === "leaf-infeasible") return "#f97373";
+        return "#38bdf8";
+      });
+
+    nodeGroup.append("text")
+      .attr("class", "tree-node-label")
+      .attr("dy", -12)
+      .attr("text-anchor", "middle")
+      .each(function(d) {
+        const el = d3.select(this);
+        const pathLine = `path=${d.data.pathStr || ""}`;
+        const gLine = `g=${isFinite(d.data.cost) ? d.data.cost : "∞"}`;
+        let lines = [pathLine, gLine];
+
+        if (d.data.type === "leaf-feasible" || d.data.type === "leaf-infeasible") {
+          const tourC = isFinite(d.data.tourCost) ? d.data.tourCost : "∞";
+          lines.push(`tour=${tourC}`);
+        }
+
+        lines.forEach((line, i) => {
+          const shortened = line.length > 40 ? line.slice(0, 38) + "…" : line;
+          el.append("tspan")
+            .attr("x", 0)
+            .attr("dy", i === 0 ? 0 : 11)
+            .text(shortened);
+        });
+      });
+  }
+
+  function clearTree() {
+    const svg = d3.select("#treeSvg");
+    svg.selectAll("*").remove();
+  }
+
+})();
+</script>
+
+</body>
+</html>

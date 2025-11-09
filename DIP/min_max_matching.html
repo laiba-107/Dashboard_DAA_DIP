@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DIP – Min–Max Matching</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root{--bg:#020617;--panel:#02091a;--border:#1e293b;--accent:#38bdf8;--text:#e5e7eb;--muted:#94a3b8;--shadow-soft:0 18px 40px rgba(15,23,42,.85);--radius-xl:18px;}
+    *{box-sizing:border-box;}
+    body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;background:radial-gradient(circle at top,#020617 0,#020617 40%,#000 100%);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
+    header{padding:16px 24px;border-bottom:1px solid var(--border);background:linear-gradient(90deg,#020617,#020617 40%,#020818);display:flex;align-items:center;justify-content:space-between;gap:16px;}
+    header h1{font-size:1.3rem;font-weight:600;letter-spacing:.03em;display:flex;align-items:center;gap:10px;}
+    header h1 span.logo{width:28px;height:28px;border-radius:999px;background:radial-gradient(circle at 30% 30%,#38bdf8,#0f172a 70%);display:inline-flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;box-shadow:0 0 0 1px rgba(148,163,184,.35);}
+    header .subtitle{font-size:.8rem;color:var(--muted);}
+    main{flex:1;padding:18px 20px 24px;}
+    .card{background:radial-gradient(circle at top left,#020b1f,#020617 55%);border-radius:var(--radius-xl);border:1px solid rgba(30,41,59,.9);box-shadow:var(--shadow-soft);padding:16px 16px 18px;position:relative;overflow:hidden;max-width:1100px;margin:0 auto;}
+    .card::before{content:"";position:absolute;inset:-40%;background:radial-gradient(circle at 0 0,rgba(56,189,248,.08),transparent 55%),radial-gradient(circle at 100% 0,rgba(168,85,247,.08),transparent 55%);opacity:.7;pointer-events:none;}
+    .card-inner{position:relative;z-index:1;}
+    .card-title{font-size:.95rem;font-weight:600;margin-bottom:6px;}
+    .card-description{font-size:.8rem;color:var(--muted);margin-bottom:10px;}
+    label{font-size:.78rem;color:var(--muted);display:block;margin-bottom:4px;}
+    input[type="file"]{font-size:.75rem;color:var(--text);}
+    button{border-radius:999px;border:1px solid rgba(56,189,248,.6);background:radial-gradient(circle at 20% 0,#38bdf8,#0f172a 70%);color:#fff;padding:6px 13px;font-size:.8rem;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 6px 20px rgba(15,23,42,.85);}
+    button:disabled{opacity:.4;cursor:default;box-shadow:none;}
+    button:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 14px 30px rgba(15,23,42,.88);}
+    .controls-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:12px;}
+    .canvas-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
+    @media(max-width:900px){.canvas-row{grid-template-columns:1fr;}}
+    .canvas-box{border-radius:14px;border:1px dashed rgba(148,163,184,.7);background:radial-gradient(circle at top,rgba(15,23,42,.95),rgba(2,6,23,.98));padding:8px;font-size:.78rem;color:var(--muted);}
+    .canvas-box h3{margin:0 0 4px;font-size:.8rem;font-weight:600;color:var(--text);}
+    canvas{width:100%;max-height:260px;border-radius:10px;border:1px solid rgba(15,23,42,.9);background:#020617;display:block;}
+    .info{margin-top:4px;font-size:.75rem;color:var(--muted);}
+    footer{font-size:.7rem;color:var(--muted);padding:6px 18px 10px;text-align:right;border-top:1px solid rgba(15,23,42,.9);background:rgba(2,6,23,.98);}
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1><span class="logo">D</span>Min–Max Matching</h1>
+    <div class="subtitle">Match source dynamic range to reference dynamic range (linear scaling).</div>
+  </div>
+</header>
+<main>
+  <section class="card">
+    <div class="card-inner">
+      <div class="card-title">Source &amp; Reference</div>
+      <p class="card-description">
+        Load a source image and a reference image. The source min/max gray levels are mapped linearly
+        to the reference min/max.
+      </p>
+
+      <div class="controls-row">
+        <div>
+          <label for="srcInput">Source</label>
+          <input type="file" id="srcInput" accept="image/*" />
+        </div>
+        <div>
+          <label for="refInput">Reference</label>
+          <input type="file" id="refInput" accept="image/*" />
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button id="matchBtn" disabled>▶ Min–Max Match</button>
+        </div>
+      </div>
+
+      <div class="canvas-row">
+        <div class="canvas-box">
+          <h3>Source (Gray)</h3>
+          <canvas id="srcCanvas"></canvas>
+          <div class="info" id="srcInfo">Min / Max: –</div>
+        </div>
+        <div class="canvas-box">
+          <h3>Reference (Gray)</h3>
+          <canvas id="refCanvas"></canvas>
+          <div class="info" id="refInfo">Min / Max: –</div>
+        </div>
+        <div class="canvas-box">
+          <h3>Matched Output</h3>
+          <canvas id="matchedCanvas"></canvas>
+          <div class="info" id="matchedInfo">Min / Max: –</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer>Formula: (v - srcMin) * (refMax - refMin) / (srcMax - srcMin) + refMin, clipped to [0,255].</footer>
+
+<script>
+(function(){
+  const srcInput=document.getElementById('srcInput');
+  const refInput=document.getElementById('refInput');
+  const matchBtn=document.getElementById('matchBtn');
+  const srcCanvas=document.getElementById('srcCanvas');
+  const refCanvas=document.getElementById('refCanvas');
+  const matchedCanvas=document.getElementById('matchedCanvas');
+  const srcInfo=document.getElementById('srcInfo');
+  const refInfo=document.getElementById('refInfo');
+  const matchedInfo=document.getElementById('matchedInfo');
+
+  let srcGray=null,srcW=0,srcH=0;
+  let refGray=null,refW=0,refH=0;
+
+  function loadImageToCanvas(file,canvas,cb){
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        canvas.width=img.width;canvas.height=img.height;
+        const ctx=canvas.getContext('2d');
+        ctx.drawImage(img,0,0);
+        cb&&cb();
+      };
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function getGrayscale(canvas){
+    const ctx=canvas.getContext('2d');
+    const w=canvas.width,h=canvas.height;
+    const imgData=ctx.getImageData(0,0,w,h);
+    const data=imgData.data;
+    const g=new Uint8ClampedArray(w*h);
+    for(let i=0;i<data.length;i+=4){
+      const r=data[i],gg=data[i+1],b=data[i+2];
+      const y=0.299*r+0.587*gg+0.114*b;
+      g[i/4]=Math.max(0,Math.min(255,Math.round(y)));
+    }
+    return{g,width:w,height:h};
+  }
+
+  function drawGrayToCanvas(g,w,h,canvas){
+    canvas.width=w;canvas.height=h;
+    const ctx=canvas.getContext('2d');
+    const imgData=ctx.createImageData(w,h);
+    const data=imgData.data;
+    for(let i=0;i<g.length;i++){
+      const v=g[i],idx=i*4;
+      data[idx]=v;data[idx+1]=v;data[idx+2]=v;data[idx+3]=255;
+    }
+    ctx.putImageData(imgData,0,0);
+  }
+
+  function minMax(g){
+    let mn=255,mx=0;
+    for(let i=0;i<g.length;i++){
+      const v=g[i];if(v<mn)mn=v;if(v>mx)mx=v;
+    }
+    return{mn,mx};
+  }
+
+  function matchMinMax(src,ref){
+    const {mn:srcMin,mx:srcMax}=minMax(src);
+    const {mn:refMin,mx:refMax}=minMax(ref);
+    const out=new Uint8ClampedArray(src.length);
+    const denom=(srcMax-srcMin)===0?1:(srcMax-srcMin);
+    for(let i=0;i<src.length;i++){
+      const v=src[i];
+      let val=(v-srcMin)*(refMax-refMin)/denom+refMin;
+      if(val<0)val=0;if(val>255)val=255;
+      out[i]=Math.round(val);
+    }
+    return out;
+  }
+
+  function checkReady(){
+    matchBtn.disabled=!(srcGray && refGray);
+  }
+
+  srcInput.addEventListener('change',e=>{
+    const f=e.target.files[0];if(!f)return;
+    loadImageToCanvas(f,srcCanvas,()=>{
+      const r=getGrayscale(srcCanvas);
+      srcGray=r.g;srcW=r.width;srcH=r.height;
+      drawGrayToCanvas(srcGray,srcW,srcH,srcCanvas);
+      const {mn,mx}=minMax(srcGray);
+      srcInfo.textContent=`Min / Max: ${mn} / ${mx}`;
+      checkReady();
+    });
+  });
+
+  refInput.addEventListener('change',e=>{
+    const f=e.target.files[0];if(!f)return;
+    loadImageToCanvas(f,refCanvas,()=>{
+      const r=getGrayscale(refCanvas);
+      refGray=r.g;refW=r.width;refH=r.height;
+      drawGrayToCanvas(refGray,refW,refH,refCanvas);
+      const {mn,mx}=minMax(refGray);
+      refInfo.textContent=`Min / Max: ${mn} / ${mx}`;
+      checkReady();
+    });
+  });
+
+  matchBtn.addEventListener('click',()=>{
+    if(!srcGray || !refGray)return;
+    const matched=matchMinMax(srcGray,refGray);
+    drawGrayToCanvas(matched,srcW,srcH,matchedCanvas);
+    const {mn,mx}=minMax(matched);
+    matchedInfo.textContent=`Min / Max: ${mn} / ${mx}`;
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DIP – Contrast Stretching</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #020617;
+      --panel: #02091a;
+      --border: #1e293b;
+      --accent: #38bdf8;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --shadow-soft: 0 18px 40px rgba(15,23,42,0.85);
+      --radius-xl: 18px;
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;
+      background:radial-gradient(circle at top,#020617 0,#020617 40%,#000 100%);
+      color:var(--text);
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+    }
+    header{
+      padding:16px 24px;
+      border-bottom:1px solid var(--border);
+      background:linear-gradient(90deg,#020617,#020617 40%,#020818);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+    }
+    header h1{
+      font-size:1.3rem;
+      font-weight:600;
+      letter-spacing:.03em;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    header h1 span.logo{
+      width:28px;height:28px;border-radius:999px;
+      background:radial-gradient(circle at 30% 30%,#38bdf8,#0f172a 70%);
+      display:inline-flex;align-items:center;justify-content:center;
+      font-size:.9rem;color:#fff;
+      box-shadow:0 0 0 1px rgba(148,163,184,.35);
+    }
+    header .subtitle{font-size:.8rem;color:var(--muted);}
+    main{flex:1;padding:18px 20px 24px;}
+    .card{
+      background:radial-gradient(circle at top left,#020b1f,#020617 55%);
+      border-radius:var(--radius-xl);
+      border:1px solid rgba(30,41,59,.9);
+      box-shadow:var(--shadow-soft);
+      padding:16px 16px 18px;
+      position:relative;overflow:hidden;
+      max-width:1100px;margin:0 auto;
+    }
+    .card::before{
+      content:"";position:absolute;inset:-40%;
+      background:
+        radial-gradient(circle at 0 0,rgba(56,189,248,.08),transparent 55%),
+        radial-gradient(circle at 100% 0,rgba(168,85,247,.08),transparent 55%);
+      opacity:.7;pointer-events:none;
+    }
+    .card-inner{position:relative;z-index:1;}
+    .card-title{font-size:.95rem;font-weight:600;margin-bottom:6px;}
+    .card-description{font-size:.8rem;color:var(--muted);margin-bottom:10px;}
+    label{font-size:.78rem;color:var(--muted);display:block;margin-bottom:4px;}
+    input[type="file"]{font-size:.75rem;color:var(--text);}
+    input[type="number"]{
+      background:rgba(15,23,42,.85);border-radius:999px;border:1px solid rgba(148,163,184,.5);
+      color:var(--text);padding:4px 8px;font-size:.78rem;min-width:70px;
+    }
+    button{
+      border-radius:999px;border:1px solid rgba(56,189,248,.6);
+      background:radial-gradient(circle at 20% 0,#38bdf8,#0f172a 70%);
+      color:#fff;padding:6px 13px;font-size:.8rem;font-weight:500;
+      cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+      box-shadow:0 6px 20px rgba(15,23,42,.85);
+    }
+    button:disabled{opacity:.4;cursor:default;box-shadow:none;}
+    button:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 14px 30px rgba(15,23,42,.88);}
+    .controls-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:12px;}
+    .canvas-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+    @media(max-width:900px){.canvas-row{grid-template-columns:1fr;}}
+    .canvas-box{
+      border-radius:14px;border:1px dashed rgba(148,163,184,.7);
+      background:radial-gradient(circle at top,rgba(15,23,42,.95),rgba(2,6,23,.98));
+      padding:8px;font-size:.78rem;color:var(--muted);
+    }
+    .canvas-box h3{margin:0 0 4px;font-size:.8rem;font-weight:600;color:var(--text);}
+    canvas{
+      width:100%;max-height:320px;border-radius:10px;
+      border:1px solid rgba(15,23,42,.9);background:#020617;display:block;
+    }
+    .info{margin-top:8px;font-size:.76rem;color:var(--muted);}
+    footer{
+      font-size:.7rem;color:var(--muted);padding:6px 18px 10px;
+      text-align:right;border-top:1px solid rgba(15,23,42,.9);
+      background:rgba(2,6,23,.98);
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1><span class="logo">D</span>Contrast Stretching</h1>
+    <div class="subtitle">
+      Auto or manual contrast stretching on 0–255 grayscale (real-time image input).
+    </div>
+  </div>
+</header>
+<main>
+  <section class="card">
+    <div class="card-inner">
+      <div class="card-title">Input &amp; Parameters</div>
+      <p class="card-description">
+        Load a grayscale image (internally converted from color). Choose automatic min/max or manually set
+        input range to stretch to [0, 255].
+      </p>
+
+      <div class="controls-row">
+        <div>
+          <label for="sourceInput">Image</label>
+          <input type="file" id="sourceInput" accept="image/*" />
+        </div>
+        <div>
+          <label>Input min (optional)</label>
+          <input type="number" id="inMin" placeholder="auto" />
+        </div>
+        <div>
+          <label>Input max (optional)</label>
+          <input type="number" id="inMax" placeholder="auto" />
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button id="stretchBtn" disabled>▶ Apply Contrast Stretching</button>
+        </div>
+      </div>
+
+      <div class="canvas-row">
+        <div class="canvas-box">
+          <h3>Original (Grayscale)</h3>
+          <canvas id="srcCanvas"></canvas>
+          <div class="info" id="origInfo">Min / Max: –</div>
+        </div>
+        <div class="canvas-box">
+          <h3>Stretched</h3>
+          <canvas id="stretchedCanvas"></canvas>
+          <div class="info" id="stretchInfo">Min / Max: –</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer>
+  Contrast stretching maps intensity range [inMin, inMax] linearly to [0, 255], clipping outside values.
+</footer>
+
+<script>
+(function(){
+  const srcInput = document.getElementById('sourceInput');
+  const stretchBtn = document.getElementById('stretchBtn');
+  const inMinInput = document.getElementById('inMin');
+  const inMaxInput = document.getElementById('inMax');
+  const srcCanvas = document.getElementById('srcCanvas');
+  const stretchedCanvas = document.getElementById('stretchedCanvas');
+  const origInfo = document.getElementById('origInfo');
+  const stretchInfo = document.getElementById('stretchInfo');
+
+  let gray = null, W=0, H=0;
+
+  function loadImageToCanvas(file, canvas, cb){
+    const reader = new FileReader();
+    reader.onload = e=>{
+      const img = new Image();
+      img.onload = ()=>{
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img,0,0);
+        cb && cb();
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function getGrayscale(canvas){
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    const imgData = ctx.getImageData(0,0,w,h);
+    const data = imgData.data;
+    const g = new Uint8ClampedArray(w*h);
+    for(let i=0;i<data.length;i+=4){
+      const r=data[i], gg=data[i+1], b=data[i+2];
+      const y = 0.299*r + 0.587*gg + 0.114*b;
+      g[i/4]=Math.max(0,Math.min(255,Math.round(y)));
+    }
+    return {g,width:w,height:h};
+  }
+
+  function drawGrayToCanvas(g,w,h,canvas){
+    canvas.width=w; canvas.height=h;
+    const ctx = canvas.getContext('2d');
+    const imgData = ctx.createImageData(w,h);
+    const data = imgData.data;
+    for(let i=0;i<g.length;i++){
+      const v=g[i]; const idx=i*4;
+      data[idx]=v; data[idx+1]=v; data[idx+2]=v; data[idx+3]=255;
+    }
+    ctx.putImageData(imgData,0,0);
+  }
+
+  function findMinMax(g){
+    let mn=255,mx=0;
+    for(let i=0;i<g.length;i++){
+      const v=g[i];
+      if(v<mn)mn=v;
+      if(v>mx)mx=v;
+    }
+    return {mn,mx};
+  }
+
+  function stretchContrast(g, inMin, inMax){
+    const out = new Uint8ClampedArray(g.length);
+    const denom = (inMax-inMin)===0 ? 1 : (inMax-inMin);
+    for(let i=0;i<g.length;i++){
+      const v=g[i];
+      let val = (v - inMin) * 255 / denom;
+      if(val<0)val=0;
+      if(val>255)val=255;
+      out[i]=Math.round(val);
+    }
+    return out;
+  }
+
+  srcInput.addEventListener('change', e=>{
+    const file = e.target.files[0];
+    if(!file)return;
+    loadImageToCanvas(file, srcCanvas, ()=>{
+      const res = getGrayscale(srcCanvas);
+      gray = res.g; W=res.width; H=res.height;
+      drawGrayToCanvas(gray,W,H,srcCanvas);
+      const {mn,mx} = findMinMax(gray);
+      origInfo.textContent = `Min / Max: ${mn} / ${mx}`;
+      stretchBtn.disabled = false;
+    });
+  });
+
+  stretchBtn.addEventListener('click', ()=>{
+    if(!gray) return;
+    const {mn,mx} = findMinMax(gray);
+    let inMin = inMinInput.value.trim()==='' ? mn : parseFloat(inMinInput.value);
+    let inMax = inMaxInput.value.trim()==='' ? mx : parseFloat(inMaxInput.value);
+    if(isNaN(inMin) || isNaN(inMax) || inMin>=inMax){
+      alert("Invalid input min/max. Ensure inMin < inMax.");
+      return;
+    }
+    const stretched = stretchContrast(gray, inMin, inMax);
+    drawGrayToCanvas(stretched,W,H,stretchedCanvas);
+    const mm2 = findMinMax(stretched);
+    stretchInfo.textContent = `Min / Max (after): ${mm2.mn} / ${mm2.mx}`;
+  });
+})();
+</script>
+</body>
+</html>

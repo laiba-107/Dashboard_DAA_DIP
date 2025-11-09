@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DIP – Histogram Matching (Equalization to Reference)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --bg: #020617;
+      --panel: #02091a;
+      --panel2: #020b1f;
+      --border: #1e293b;
+      --accent: #38bdf8;
+      --accent2: #a855f7;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --good: #22c55e;
+      --shadow-soft: 0 18px 40px rgba(15,23,42,0.85);
+      --radius-xl: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, Ubuntu, "Helvetica Neue", Arial, sans-serif;
+      background: radial-gradient(circle at top, #020617 0, #020617 40%, #000 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(90deg, #020617, #020617 40%, #020818);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    header h1 {
+      font-size: 1.3rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    header h1 span.logo {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, #38bdf8, #0f172a 70%);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      color: white;
+      box-shadow: 0 0 0 1px rgba(148,163,184,0.35);
+    }
+
+    header .subtitle {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.7);
+      font-size: 0.74rem;
+      color: var(--muted);
+      background: rgba(15,23,42,0.85);
+    }
+
+    .pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 3px rgba(56,189,248,0.35);
+    }
+
+    main {
+      flex: 1;
+      padding: 18px 20px 24px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.1fr 1.1fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 1100px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: radial-gradient(circle at top left, #020b1f, #020617 55%);
+      border-radius: var(--radius-xl);
+      border: 1px solid rgba(30,41,59,0.9);
+      box-shadow: var(--shadow-soft);
+      padding: 16px 16px 18px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background:
+        radial-gradient(circle at 0 0, rgba(56,189,248,0.08), transparent 55%),
+        radial-gradient(circle at 100% 0, rgba(168,85,247,0.08), transparent 55%);
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .card-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title-badge {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      color: var(--muted);
+    }
+
+    .card-description {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    input[type="file"] {
+      font-size: 0.75rem;
+      color: var(--text);
+    }
+
+    button {
+      border-radius: 999px;
+      border: 1px solid rgba(56,189,248,0.6);
+      background: radial-gradient(circle at 20% 0, #38bdf8, #0f172a 70%);
+      color: white;
+      padding: 6px 13px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+      box-shadow: 0 6px 20px rgba(15,23,42,0.85);
+      white-space: nowrap;
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: default;
+      transform: none;
+      box-shadow: none;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 30px rgba(15,23,42,0.88);
+    }
+
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .canvas-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 900px) {
+      .canvas-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .canvas-box {
+      border-radius: 14px;
+      border: 1px dashed rgba(148,163,184,0.7);
+      background: radial-gradient(circle at top, rgba(15,23,42,0.95), rgba(2,6,23,0.98));
+      padding: 8px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .canvas-box h3 {
+      margin: 0 0 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    canvas {
+      width: 100%;
+      max-height: 260px;
+      border-radius: 10px;
+      border: 1px solid rgba(15,23,42,0.9);
+      background: #020617;
+      display: block;
+    }
+
+    .hist-row {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      font-size: 0.72rem;
+    }
+
+    @media (max-width: 900px) {
+      .hist-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .hist-box {
+      background: rgba(15,23,42,0.9);
+      border-radius: 10px;
+      border: 1px solid rgba(30,41,59,0.9);
+      padding: 6px 8px;
+      overflow: auto;
+      max-height: 160px;
+    }
+
+    .hist-box h4 {
+      margin: 0 0 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .hist-box pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--muted);
+    }
+
+    footer {
+      font-size: 0.7rem;
+      color: var(--muted);
+      padding: 6px 18px 10px;
+      text-align: right;
+      border-top: 1px solid rgba(15,23,42,0.9);
+      background: rgba(2,6,23,0.98);
+    }
+  </style>
+</head>
+
+<body>
+<header>
+  <div>
+    <h1>
+      <span class="logo">DIP</span>
+      Histogram Matching (Equalization to Reference)
+    </h1>
+    <div class="subtitle">
+      Upload a source image and a reference image. The source histogram is matched to the reference by CDF mapping.
+    </div>
+  </div>
+  <div class="pill">
+    <span class="pill-dot"></span>
+    <span>Grayscale · 256 levels · CDF-based mapping</span>
+  </div>
+</header>
+
+<main>
+  <div class="layout">
+    <!-- LEFT: Inputs & canvases -->
+    <section class="card">
+      <div class="card-inner">
+        <div class="card-header">
+          <div class="card-title">
+            Inputs &amp; Images
+            <span class="card-title-badge">Step 1 &amp; 5</span>
+          </div>
+        </div>
+        <p class="card-description">
+          Step 1: Load a <strong>source image</strong> and a <strong>reference image</strong>.  
+          Step 5: Apply mapping to transform the source image so that its histogram approximates the reference.
+        </p>
+
+        <div class="controls-row">
+          <div>
+            <label for="sourceInput">Source image</label>
+            <input type="file" id="sourceInput" accept="image/*">
+          </div>
+          <div>
+            <label for="refInput">Reference image</label>
+            <input type="file" id="refInput" accept="image/*">
+          </div>
+          <div style="flex:1;"></div>
+        </div>
+
+        <div class="controls-row">
+          <button id="matchButton" disabled>
+            ▶ Histogram Matching (source → reference)
+          </button>
+        </div>
+
+        <div class="canvas-row">
+          <div class="canvas-box">
+            <h3>Source (Grayscale)</h3>
+            <canvas id="sourceCanvas"></canvas>
+          </div>
+          <div class="canvas-box">
+            <h3>Reference (Grayscale)</h3>
+            <canvas id="refCanvas"></canvas>
+          </div>
+          <div class="canvas-box">
+            <h3>Matched Output</h3>
+            <canvas id="matchedCanvas"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: Histograms / CDFs -->
+    <section class="card">
+      <div class="card-inner">
+        <div class="card-header">
+          <div class="card-title">
+            Histograms, PDFs, CDFs &amp; Mapping
+            <span class="card-title-badge">Steps 2–4 &amp; 6</span>
+          </div>
+        </div>
+        <p class="card-description">
+          Step 2: Normalize histograms → PDFs.  
+          Step 3: Compute CDFs.  
+          Step 4: Build mapping: for each source gray level, choose reference gray with closest CDF value.  
+          Step 6: Histogram of matched image approximates reference histogram.
+        </p>
+
+        <div class="hist-row">
+          <div class="hist-box">
+            <h4>Source Histogram / CDF (first 32 bins)</h4>
+            <pre id="sourceHistInfo">–</pre>
+          </div>
+          <div class="hist-box">
+            <h4>Reference Histogram / CDF (first 32 bins)</h4>
+            <pre id="refHistInfo">–</pre>
+          </div>
+          <div class="hist-box">
+            <h4>Matched Histogram (first 32 bins)</h4>
+            <pre id="matchedHistInfo">–</pre>
+          </div>
+        </div>
+
+        <div class="hist-row" style="margin-top:8px;">
+          <div class="hist-box" style="grid-column: 1 / span 3;">
+            <h4>Mapping Table (first 32 gray levels)</h4>
+            <pre id="mappingInfo">–</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  Implementation: 0–255 grayscale, per-channel average, histogram matching via CDF-based many-to-one mapping.  
+  You can plug this file into your DIP dashboard as a separate page/component.
+</footer>
+
+<script>
+(function() {
+  const sourceInput = document.getElementById('sourceInput');
+  const refInput = document.getElementById('refInput');
+  const matchButton = document.getElementById('matchButton');
+
+  const sourceCanvas = document.getElementById('sourceCanvas');
+  const refCanvas = document.getElementById('refCanvas');
+  const matchedCanvas = document.getElementById('matchedCanvas');
+
+  const sourceHistInfo = document.getElementById('sourceHistInfo');
+  const refHistInfo = document.getElementById('refHistInfo');
+  const matchedHistInfo = document.getElementById('matchedHistInfo');
+  const mappingInfo = document.getElementById('mappingInfo');
+
+  let sourceGray = null;
+  let sourceW = 0;
+  let sourceH = 0;
+
+  let refGray = null;
+  let refW = 0;
+  let refH = 0;
+
+  function enableButtonIfReady() {
+    matchButton.disabled = !(sourceGray && refGray);
+  }
+
+  function loadImageToCanvas(file, canvas, callback) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        callback && callback();
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function getGrayscaleFromCanvas(canvas) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const data = imgData.data;
+    const gray = new Uint8ClampedArray(w * h);
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const y = 0.299 * r + 0.587 * g + 0.114 * b;
+      gray[i / 4] = Math.max(0, Math.min(255, Math.round(y)));
+    }
+
+    return { gray, width: w, height: h };
+  }
+
+  function drawGrayToCanvas(gray, w, h, canvas) {
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    const imgData = ctx.createImageData(w, h);
+    const data = imgData.data;
+
+    for (let i = 0; i < gray.length; i++) {
+      const v = gray[i];
+      const idx = i * 4;
+      data[idx] = v;
+      data[idx + 1] = v;
+      data[idx + 2] = v;
+      data[idx + 3] = 255;
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+  }
+
+  function computeHistogram(gray) {
+    const hist = new Array(256).fill(0);
+    for (let i = 0; i < gray.length; i++) {
+      let v = gray[i];
+      if (v < 0) v = 0;
+      if (v > 255) v = 255;
+      hist[v]++;
+    }
+    return hist;
+  }
+
+  function normalizeHist(hist, totalPixels) {
+    const pdf = new Array(256);
+    for (let i = 0; i < 256; i++) {
+      pdf[i] = hist[i] / totalPixels;
+    }
+    return pdf;
+  }
+
+  function computeCDF(pdf) {
+    const cdf = new Array(256);
+    let cum = 0;
+    for (let i = 0; i < 256; i++) {
+      cum += pdf[i];
+      cdf[i] = cum;
+    }
+    return cdf;
+  }
+
+  function buildMappingFromCDFs(cdfSrc, cdfRef) {
+    const mapping = new Array(256);
+    for (let g = 0; g < 256; g++) {
+      let bestT = 0;
+      let bestDiff = Infinity;
+      const target = cdfSrc[g];
+
+      for (let t = 0; t < 256; t++) {
+        const diff = Math.abs(cdfRef[t] - target);
+        if (diff < bestDiff) {
+          bestDiff = diff;
+          bestT = t;
+        }
+      }
+      mapping[g] = bestT;
+    }
+    return mapping;
+  }
+
+  function applyMapping(gray, mapping) {
+    const out = new Uint8ClampedArray(gray.length);
+    for (let i = 0; i < gray.length; i++) {
+      let v = gray[i];
+      if (v < 0) v = 0;
+      if (v > 255) v = 255;
+      out[i] = mapping[v];
+    }
+    return out;
+  }
+
+  function histInfoString(hist, cdf) {
+    const lines = [];
+    const maxBins = 32;
+    const total = hist.reduce((a, b) => a + b, 0);
+    lines.push(`Total pixels = ${total}`);
+    lines.push(`Gray | Count | CDF`);
+    for (let i = 0; i < maxBins; i++) {
+      lines.push(
+        `${i.toString().padStart(3, " ")} : ${hist[i]
+          .toString()
+          .padStart(6, " ")} | ${cdf ? cdf[i].toFixed(4) : "-"}`
+      );
+    }
+    if (hist.length > maxBins) {
+      lines.push("...");
+    }
+    return lines.join("\n");
+  }
+
+  function mappingInfoString(mapping) {
+    if (!mapping) return "–";
+    const lines = [];
+    lines.push("g (src gray) → mapped gray (ref)");
+    const maxBins = 32;
+    for (let g = 0; g < maxBins; g++) {
+      lines.push(`${g.toString().padStart(3, " ")} → ${mapping[g].toString().padStart(3, " ")}`);
+    }
+    if (mapping.length > maxBins) {
+      lines.push("...");
+    }
+    return lines.join("\n");
+  }
+
+  // --- Event handlers ---
+
+  sourceInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    loadImageToCanvas(file, sourceCanvas, () => {
+      const res = getGrayscaleFromCanvas(sourceCanvas);
+      sourceGray = res.gray;
+      sourceW = res.width;
+      sourceH = res.height;
+      drawGrayToCanvas(sourceGray, sourceW, sourceH, sourceCanvas);
+
+      // update source hist info
+      const hist = computeHistogram(sourceGray);
+      const pdf = normalizeHist(hist, sourceGray.length);
+      const cdf = computeCDF(pdf);
+      sourceHistInfo.textContent = histInfoString(hist, cdf);
+
+      enableButtonIfReady();
+    });
+  });
+
+  refInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    loadImageToCanvas(file, refCanvas, () => {
+      const res = getGrayscaleFromCanvas(refCanvas);
+      refGray = res.gray;
+      refW = res.width;
+      refH = res.height;
+      drawGrayToCanvas(refGray, refW, refH, refCanvas);
+
+      // update ref hist info
+      const hist = computeHistogram(refGray);
+      const pdf = normalizeHist(hist, refGray.length);
+      const cdf = computeCDF(pdf);
+      refHistInfo.textContent = histInfoString(hist, cdf);
+
+      enableButtonIfReady();
+    });
+  });
+
+  matchButton.addEventListener('click', () => {
+    if (!sourceGray || !refGray) {
+      alert("Please load both source and reference images first.");
+      return;
+    }
+
+    // Steps 2 & 3: PDFs & CDFs
+    const srcHist = computeHistogram(sourceGray);
+    const srcPdf = normalizeHist(srcHist, sourceGray.length);
+    const srcCdf = computeCDF(srcPdf);
+
+    const refHist = computeHistogram(refGray);
+    const refPdf = normalizeHist(refHist, refGray.length);
+    const refCdf = computeCDF(refPdf);
+
+    // Step 4: Build mapping using CDFs
+    const mapping = buildMappingFromCDFs(srcCdf, refCdf);
+    mappingInfo.textContent = mappingInfoString(mapping);
+
+    // Step 5: Apply mapping to source
+    const matchedGray = applyMapping(sourceGray, mapping);
+
+    // Draw result
+    drawGrayToCanvas(matchedGray, sourceW, sourceH, matchedCanvas);
+
+    // Step 6: Histogram of matched image
+    const matchedHist = computeHistogram(matchedGray);
+    const matchedPdf = normalizeHist(matchedHist, matchedGray.length);
+    const matchedCdf = computeCDF(matchedPdf);
+
+    sourceHistInfo.textContent = histInfoString(srcHist, srcCdf);
+    refHistInfo.textContent = histInfoString(refHist, refCdf);
+    matchedHistInfo.textContent = histInfoString(matchedHist, matchedCdf);
+  });
+
+})();
+</script>
+
+</body>
+</html>

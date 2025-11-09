@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DIP – Image (Template) Matching</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root{--bg:#020617;--panel:#02091a;--border:#1e293b;--accent:#38bdf8;--text:#e5e7eb;--muted:#94a3b8;--shadow-soft:0 18px 40px rgba(15,23,42,.85);--radius-xl:18px;}
+    *{box-sizing:border-box;}
+    body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;background:radial-gradient(circle at top,#020617 0,#020617 40%,#000 100%);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
+    header{padding:16px 24px;border-bottom:1px solid var(--border);background:linear-gradient(90deg,#020617,#020617 40%,#020818);display:flex;align-items:center;justify-content:space-between;gap:16px;}
+    header h1{font-size:1.3rem;font-weight:600;letter-spacing:.03em;display:flex;align-items:center;gap:10px;}
+    header h1 span.logo{width:28px;height:28px;border-radius:999px;background:radial-gradient(circle at 30% 30%,#38bdf8,#0f172a 70%);display:inline-flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;box-shadow:0 0 0 1px rgba(148,163,184,.35);}
+    header .subtitle{font-size:.8rem;color:var(--muted);}
+    main{flex:1;padding:18px 20px 24px;}
+    .card{background:radial-gradient(circle at top left,#020b1f,#020617 55%);border-radius:var(--radius-xl);border:1px solid rgba(30,41,59,.9);box-shadow:var(--shadow-soft);padding:16px 16px 18px;position:relative;overflow:hidden;max-width:1100px;margin:0 auto;}
+    .card::before{content:"";position:absolute;inset:-40%;background:radial-gradient(circle at 0 0,rgba(56,189,248,.08),transparent 55%),radial-gradient(circle at 100% 0,rgba(168,85,247,.08),transparent 55%);opacity:.7;pointer-events:none;}
+    .card-inner{position:relative;z-index:1;}
+    .card-title{font-size:.95rem;font-weight:600;margin-bottom:6px;}
+    .card-description{font-size:.8rem;color:var(--muted);margin-bottom:10px;}
+    label{font-size:.78rem;color:var(--muted);display:block;margin-bottom:4px;}
+    input[type="file"]{font-size:.75rem;color:var(--text);}
+    button{border-radius:999px;border:1px solid rgba(56,189,248,.6);background:radial-gradient(circle at 20% 0,#38bdf8,#0f172a 70%);color:#fff;padding:6px 13px;font-size:.8rem;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 6px 20px rgba(15,23,42,.85);}
+    button:disabled{opacity:.4;cursor:default;box-shadow:none;}
+    button:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 14px 30px rgba(15,23,42,.88);}
+    .controls-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:12px;}
+    .canvas-row{display:grid;grid-template-columns:2fr 1fr;gap:12px;}
+    @media(max-width:900px){.canvas-row{grid-template-columns:1fr;}}
+    .canvas-box{border-radius:14px;border:1px dashed rgba(148,163,184,.7);background:radial-gradient(circle at top,rgba(15,23,42,.95),rgba(2,6,23,.98));padding:8px;font-size:.78rem;color:var(--muted);}
+    .canvas-box h3{margin:0 0 4px;font-size:.8rem;font-weight:600;color:var(--text);}
+    canvas{width:100%;max-height:380px;border-radius:10px;border:1px solid rgba(15,23,42,.9);background:#020617;display:block;}
+    .info{margin-top:4px;font-size:.75rem;color:var(--muted);}
+    footer{font-size:.7rem;color:var(--muted);padding:6px 18px 10px;text-align:right;border-top:1px solid rgba(15,23,42,.9);background:rgba(2,6,23,.98);}
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1><span class="logo">D</span>Image / Template Matching</h1>
+    <div class="subtitle">SAD-based template matching: slide template over source, find minimum error.</div>
+  </div>
+</header>
+<main>
+  <section class="card">
+    <div class="card-inner">
+      <div class="card-title">Source &amp; Template</div>
+      <p class="card-description">
+        1) Load a larger <strong>source</strong> image.  
+        2) Load a smaller <strong>template</strong>.  
+        3) Run matching to highlight the best match (minimum Sum of Absolute Differences).
+      </p>
+
+      <div class="controls-row">
+        <div>
+          <label for="srcInput">Source image</label>
+          <input type="file" id="srcInput" accept="image/*" />
+        </div>
+        <div>
+          <label for="tplInput">Template image</label>
+          <input type="file" id="tplInput" accept="image/*" />
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button id="matchBtn" disabled>▶ Match Template</button>
+        </div>
+      </div>
+
+      <div class="canvas-row">
+        <div class="canvas-box">
+          <h3>Source (with best match rectangle)</h3>
+          <canvas id="srcCanvas"></canvas>
+          <div class="info" id="matchInfo">Best match: –</div>
+        </div>
+        <div class="canvas-box">
+          <h3>Template (grayscale)</h3>
+          <canvas id="tplCanvas"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer>Template matching here uses SAD on 0–255 grayscale values.</footer>
+
+<script>
+(function(){
+  const srcInput=document.getElementById('srcInput');
+  const tplInput=document.getElementById('tplInput');
+  const matchBtn=document.getElementById('matchBtn');
+  const srcCanvas=document.getElementById('srcCanvas');
+  const tplCanvas=document.getElementById('tplCanvas');
+  const matchInfo=document.getElementById('matchInfo');
+
+  let srcGray=null,srcW=0,srcH=0;
+  let tplGray=null,tplW=0,tplH=0;
+
+  function loadImageToCanvas(file,canvas,cb){
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        canvas.width=img.width;canvas.height=img.height;
+        const ctx=canvas.getContext('2d');
+        ctx.drawImage(img,0,0);
+        cb&&cb();
+      };
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function getGrayscale(canvas){
+    const ctx=canvas.getContext('2d');
+    const w=canvas.width,h=canvas.height;
+    const imgData=ctx.getImageData(0,0,w,h);
+    const data=imgData.data;
+    const g=new Uint8ClampedArray(w*h);
+    for(let i=0;i<data.length;i+=4){
+      const r=data[i],gg=data[i+1],b=data[i+2];
+      const y=0.299*r+0.587*gg+0.114*b;
+      g[i/4]=Math.max(0,Math.min(255,Math.round(y)));
+    }
+    return{g,width:w,height:h};
+  }
+
+  function drawGrayToCanvas(g,w,h,canvas){
+    canvas.width=w;canvas.height=h;
+    const ctx=canvas.getContext('2d');
+    const imgData=ctx.createImageData(w,h);
+    const data=imgData.data;
+    for(let i=0;i<g.length;i++){
+      const v=g[i],idx=i*4;
+      data[idx]=v;data[idx+1]=v;data[idx+2]=v;data[idx+3]=255;
+    }
+    ctx.putImageData(imgData,0,0);
+  }
+
+  function checkReady(){
+    matchBtn.disabled=!(srcGray && tplGray && srcW>=tplW && srcH>=tplH);
+  }
+
+  srcInput.addEventListener('change',e=>{
+    const f=e.target.files[0];if(!f)return;
+    loadImageToCanvas(f,srcCanvas,()=>{
+      const r=getGrayscale(srcCanvas);
+      srcGray=r.g;srcW=r.width;srcH=r.height;
+      drawGrayToCanvas(srcGray,srcW,srcH,srcCanvas);
+      checkReady();
+    });
+  });
+
+  tplInput.addEventListener('change',e=>{
+    const f=e.target.files[0];if(!f)return;
+    loadImageToCanvas(f,tplCanvas,()=>{
+      const r=getGrayscale(tplCanvas);
+      tplGray=r.g;tplW=r.width;tplH=r.height;
+      drawGrayToCanvas(tplGray,tplW,tplH,tplCanvas);
+      checkReady();
+    });
+  });
+
+  function matchTemplate(){
+    const maxY=srcH-tplH;
+    const maxX=srcW-tplW;
+    let bestError=Infinity,bx=0,by=0;
+
+    for(let y=0;y<=maxY;y++){
+      for(let x=0;x<=maxX;x++){
+        let sad=0;
+        for(let j=0;j<tplH;j++){
+          for(let i=0;i<tplW;i++){
+            const srcIdx=(y+j)*srcW+(x+i);
+            const tplIdx=j*tplW+i;
+            const diff=srcGray[srcIdx]-tplGray[tplIdx];
+            sad+=Math.abs(diff);
+          }
+        }
+        if(sad<bestError){
+          bestError=sad;bx=x;by=y;
+        }
+      }
+    }
+    return{bx,by,bestError};
+  }
+
+  function drawMatchRectangle(x,y,w,h){
+    const ctx=srcCanvas.getContext('2d');
+    // redraw grayscale
+    drawGrayToCanvas(srcGray,srcW,srcH,srcCanvas);
+    ctx.strokeStyle='#facc15';
+    ctx.lineWidth=2;
+    ctx.strokeRect(x+0.5,y+0.5,w,h);
+  }
+
+  matchBtn.addEventListener('click',()=>{
+    if(!srcGray || !tplGray)return;
+    const {bx,by,bestError}=matchTemplate();
+    drawMatchRectangle(bx,by,tplW,tplH);
+    matchInfo.textContent=`Best match at (x=${bx}, y=${by}), SAD = ${bestError}`;
+  });
+})();
+</script>
+</body>
+</html>
