@@ -354,117 +354,140 @@
         </div>
         <span class="card-title-pill">Metaheuristic · PSO</span>
       </div>
+
       <div class="card-body">
-        <div class="small-heading">Optimization Problem</div>
-        <p>
-          We have <strong>N tasks</strong>, each with a processing time
-          \( p_i \), and <strong>M identical machines</strong>.
-          An assignment chooses a machine index
-          \( m_i \in \{0,\dots,M-1\} \) for every task \( i \).
-        </p>
-        <p>
-          The load of machine \( k \) is
-          \( L_k = \sum_{i : m_i = k} p_i \).
-          The <strong>makespan</strong> is
-          \( C_{\max} = \max_k L_k \).
-          Our goal is to <strong>minimize</strong> \( C_{\max} \).
-        </p>
+  <div class="small-heading">Optimization Problem</div>
+  <p>
+    We have <strong>N tasks</strong>, each with a processing time <strong>p<sub>i</sub></strong>,
+    and <strong>M identical machines</strong>. An assignment chooses a machine index
+    <strong>m<sub>i</sub> ∈ {0, …, M−1}</strong> for every task <strong>i</strong>.
+  </p>
+  <p>
+    The load of machine <strong>k</strong> is:
+    <span class="code-inline">L<sub>k</sub> = sum of p<sub>i</sub> for all tasks assigned to machine k</span><br>
+    The <strong>makespan</strong> is the maximum load over all machines:
+    <span class="code-inline">C<sub>max</sub> = max(L<sub>0</sub>, L<sub>1</sub>, …, L<sub>M−1</sub>)</span><br>
+    Our goal is to <strong>minimize</strong> this makespan.
+  </p>
 
-        <div class="small-heading">Particle Swarm Optimization (PSO)</div>
-        <ul class="ps-list">
-          <li>Each particle has a <strong>position</strong> vector
-            <span class="code-inline">x = [x₁,…,xₙ]</span> in continuous space.
-            We map it to a discrete assignment by
-            <span class="code-inline">machine = floor(xᵢ)</span>.</li>
-          <li>Velocity <span class="code-inline">v</span> is updated using:
-            <br>
-            <span class="code-inline">
-              v = w·v + c1·r1·(pBest − x) + c2·r2·(gBest − x)
-            </span>
-          </li>
-          <li>Position is updated as <span class="code-inline">x = x + v</span>
-            and clamped to the range <span class="code-inline">[0, M−ε]</span>.
-          </li>
-          <li><strong>Fitness</strong> of a particle = makespan of its assignment.
-            PSO iteratively improves particles toward lower makespan.</li>
-        </ul>
+  <div class="small-heading">Particle Swarm Optimization (PSO)</div>
+  <ul class="ps-list">
+    <li>
+      Each particle has a continuous <strong>position vector</strong>
+      <span class="code-inline">x = [x₁, x₂, …, xₙ]</span>.
+      We convert this to a discrete schedule by:
+      <span class="code-inline">machine for task i = floor(xᵢ)</span>
+      (then we clamp it to the range 0 … M−1).
+    </li>
+    <li>
+      Each particle also has a <strong>velocity vector</strong>
+      <span class="code-inline">v</span>. At each iteration we update:
+      <br>
+      <span class="code-inline">
+        v = w·v + c₁·r₁·(pBest − x) + c₂·r₂·(gBest − x)
+      </span>
+      <br>
+      where:
+      <span class="code-inline">w</span> is the inertia weight,
+      <span class="code-inline">c₁</span> and <span class="code-inline">c₂</span> are acceleration
+      coefficients, and <span class="code-inline">r₁</span>, <span class="code-inline">r₂</span>
+      are random numbers in [0, 1].
+    </li>
+    <li>
+      Then we update the <strong>position</strong>:
+      <span class="code-inline">x = x + v</span>,
+      and clamp each xᵢ to stay inside the allowed range
+      <span class="code-inline">0 ≤ xᵢ &lt; M</span>.
+    </li>
+    <li>
+      For each particle we build its task–machine assignment,
+      compute all machine loads, and its
+      <strong>fitness = makespan</strong>.
+      A lower makespan means a better particle.
+    </li>
+    <li>
+      Each particle remembers its own best position so far
+      (<strong>personal best / pBest</strong>), and the swarm also keeps the
+      <strong>global best / gBest</strong>. Over time, particles move toward
+      these good regions of the search space.
+    </li>
+  </ul>
 
-        <hr style="border:none;border-top:1px solid #1f2937;margin:10px 0 12px;">
+  <hr style="border:none;border-top:1px solid #1f2937;margin:10px 0 12px;">
 
-        <div class="small-heading">Experiment Setup</div>
+  <div class="small-heading">Experiment Setup</div>
 
-        <div class="two-col">
-          <div>
-            <label for="numTasks">Number of tasks (N)</label>
-            <input id="numTasks" type="number" min="1" max="40" value="10">
-          </div>
-          <div>
-            <label for="numMachines">Number of machines (M)</label>
-            <input id="numMachines" type="number" min="2" max="10" value="3">
-          </div>
-        </div>
+  <div class="two-col">
+    <div>
+      <label for="numTasks">Number of tasks (N)</label>
+      <input id="numTasks" type="number" min="1" max="40" value="10">
+    </div>
+    <div>
+      <label for="numMachines">Number of machines (M)</label>
+      <input id="numMachines" type="number" min="2" max="10" value="3">
+    </div>
+  </div>
 
-        <div style="margin-top:8px;">
-          <label for="taskDurations">Task processing times (comma-separated)</label>
-          <textarea id="taskDurations"
-            placeholder="Example: 4, 6, 3, 8, 2, 5, 7">
+  <div style="margin-top:8px;">
+    <label for="taskDurations">Task processing times (comma-separated)</label>
+    <textarea id="taskDurations"
+      placeholder="Example: 4, 6, 3, 8, 2, 5, 7">
 4, 6, 3, 8, 2, 5, 7, 9, 4, 6</textarea>
-          <p class="note">
-            If the number of values does not match N, the list will be trimmed or
-            extended by random integers between 2 and 15.
-          </p>
-        </div>
+    <p class="note">
+      If the number of values does not match N, the list will be trimmed or
+      extended by random integers between 2 and 15.
+    </p>
+  </div>
 
-        <div class="two-col" style="margin-top:6px;">
-          <div>
-            <label>Swarm size</label>
-            <input id="swarmSize" type="number" min="5" max="200" value="40">
-          </div>
-          <div>
-            <label>Iterations</label>
-            <input id="iterations" type="number" min="5" max="500" value="80">
-          </div>
-        </div>
+  <div class="two-col" style="margin-top:6px;">
+    <div>
+      <label>Swarm size</label>
+      <input id="swarmSize" type="number" min="5" max="200" value="40">
+    </div>
+    <div>
+      <label>Iterations</label>
+      <input id="iterations" type="number" min="5" max="500" value="80">
+    </div>
+  </div>
 
-        <div class="two-col" style="margin-top:6px;">
-          <div>
-            <label>Inertia weight (w)</label>
-            <input id="inertia" type="number" step="0.05" value="0.7">
-          </div>
-          <div>
-            <label>Cognitive &amp; social (c1 = c2)</label>
-            <input id="coeff" type="number" step="0.1" value="1.6">
-          </div>
-        </div>
+  <div class="two-col" style="margin-top:6px;">
+    <div>
+      <label>Inertia weight (w)</label>
+      <input id="inertia" type="number" step="0.05" value="0.7">
+    </div>
+    <div>
+      <label>Cognitive &amp; social (c1 = c2)</label>
+      <input id="coeff" type="number" step="0.1" value="1.6">
+    </div>
+  </div>
 
-        <div class="btn-row">
-          <button id="btnRandomTasks" class="ghost">
-            🎲 Random tasks
-          </button>
-          <button id="btnRun">
-            ▶ Run PSO Scheduling
-          </button>
-          <button id="btnStep" class="secondary">
-            ➤ Step 1 iteration
-          </button>
-        </div>
+  <div class="btn-row">
+    <button id="btnRandomTasks" class="ghost">
+      🎲 Random tasks
+    </button>
+    <button id="btnRun">
+      ▶ Run PSO Scheduling
+    </button>
+    <button id="btnStep" class="secondary">
+      ➤ Step 1 iteration
+    </button>
+  </div>
 
-        <div class="metrics-row">
-          <div class="pill-metric">
-            Best makespan:
-            <strong id="bestMakespanLabel">—</strong>
-          </div>
-          <div class="pill-metric">
-            Iteration:
-            <strong id="iterationLabel">—</strong>
-          </div>
-          <div class="pill-metric">
-            Machines:
-            <strong id="machinesLabel">—</strong>
-          </div>
-        </div>
-
-      </div>
+  <div class="metrics-row">
+    <div class="pill-metric">
+      Best makespan:
+      <strong id="bestMakespanLabel">—</strong>
+    </div>
+    <div class="pill-metric">
+      Iteration:
+      <strong id="iterationLabel">—</strong>
+    </div>
+    <div class="pill-metric">
+      Machines:
+      <strong id="machinesLabel">—</strong>
+    </div>
+  </div>
+</div>
     </section>
 
     <!-- RIGHT: Visualizations & Results -->
