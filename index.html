@@ -3,58 +3,82 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Algorithms Lab — Dashboard</title>
+<title>Dashboard — Algorithms & DIP</title>
 <style>
   :root{
-    --bg:#0b1220;
-    --panel:#0f172a;
-    --panel-2:#0c1526;
-    --border:#1f2a44;
+    --bg:#020617;
+    --bg-soft:#03091b;
+    --panel:#0b1120;
+    --panel-2:#020617;
+    --border:#1f2937;
     --text:#e5e7eb;
-    --muted:#9aa3b2;
+    --muted:#9ca3af;
     --accent:#38bdf8;
     --accent-2:#60a5fa;
   }
   *{box-sizing:border-box}
   body{
     margin:0;
-    background:var(--bg);
+    background:radial-gradient(circle at top,#1d2a4d 0,#020617 50%,#000 100%);
     color:var(--text);
     font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",Arial;
   }
   header{
-    padding:14px 22px;
-    border-bottom:1px solid var(--border);
-    background:#09101d;
+    padding:18px 24px 12px;
+    border-bottom:1px solid rgba(15,23,42,.8);
+    background:linear-gradient(135deg,#020617 0,#020617 40%,#0b1120 100%);
     display:flex;
     justify-content:space-between;
     align-items:center;
   }
-  header h1{margin:0;font-size:1.2rem;letter-spacing:.02em}
+  header-left{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  header h1{
+    margin:0;
+    font-size:1.25rem;
+    letter-spacing:.04em;
+  }
   header small{color:var(--muted)}
+  .tagline{
+    font-size:.8rem;
+    text-transform:uppercase;
+    letter-spacing:.18em;
+    color:var(--accent-2);
+  }
 
   /* Top main tabs */
   .main-tabs{
     display:flex;
     gap:8px;
     border-bottom:1px solid var(--border);
-    background:#0d1628;
-    padding:6px 10px;
+    background:#020617dd;
+    padding:8px 16px;
+    backdrop-filter:blur(12px);
   }
   .main-tab{
     appearance:none;
-    border:1px solid var(--border);
-    background:var(--panel);
-    color:var(--text);
-    padding:8px 12px;
-    border-radius:10px;
+    border:1px solid transparent;
+    background:transparent;
+    color:var(--muted);
+    padding:8px 14px;
+    border-radius:999px;
     cursor:pointer;
-    font-size:.95rem;
+    font-size:.9rem;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .main-tab span.icon{
+    font-size:1rem;
   }
   .main-tab.active{
+    color:#e5e7eb;
     border-color:var(--accent);
-    box-shadow:0 0 0 1px var(--accent) inset;
-    background:linear-gradient(180deg,#0f1c35,#0a1324);
+    box-shadow:0 0 0 1px rgba(56,189,248,.4);
+    background:linear-gradient(135deg,#0b1120,#020617);
   }
   .tab-panel{display:none}
   .tab-panel.active{display:block}
@@ -62,52 +86,80 @@
   /* Layout */
   .alg-layout{
     display:grid;
-    grid-template-columns:260px 1fr;
-    gap:16px;
-    padding:16px;
+    grid-template-columns:260px minmax(0,1fr);
+    gap:18px;
+    padding:18px;
   }
   @media(max-width:900px){
     .alg-layout{grid-template-columns:1fr}
   }
+
   .sidebar{
-    background:var(--panel);
+    background:rgba(15,23,42,.96);
     border:1px solid var(--border);
-    border-radius:12px;
-    padding:12px;
+    border-radius:18px;
+    padding:14px;
+    box-shadow:0 18px 40px rgba(0,0,0,.45);
   }
   .sidebar h3{
-    margin:6px 6px 8px;
+    margin:4px 6px 2px;
     font-size:1rem;
-    color:#cdd4df;
+    color:#e5e7eb;
+  }
+  .sidebar p{
+    margin:0 6px 10px;
+    font-size:.78rem;
+    color:var(--muted);
   }
   .alg-list,
+  .dip-list,
   .filter-list{
     list-style:none;
     margin:0;
-    padding:0;
+    padding:4px 0 0;
     display:flex;
     flex-direction:column;
     gap:6px;
   }
   .alg-item,
+  .dip-item,
   .filter-item{
-    padding:10px 12px;
-    border:1px solid var(--border);
-    border-radius:10px;
-    background:var(--panel-2);
+    padding:9px 11px;
+    border:1px solid rgba(30,64,175,.6);
+    border-radius:12px;
+    background:linear-gradient(135deg,rgba(15,23,42,.95),rgba(15,23,42,.96));
     color:var(--text);
     cursor:pointer;
-    font-size:.92rem;
+    font-size:.86rem;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .alg-item span.label,
+  .dip-item span.label,
+  .filter-item span.label{
+    flex:1;
+  }
+  .alg-item span.badge,
+  .dip-item span.badge,
+  .filter-item span.badge{
+    font-size:.7rem;
+    padding:2px 7px;
+    border-radius:999px;
+    border:1px solid rgba(148,163,184,.7);
+    color:var(--muted);
   }
   .alg-item:hover,
+  .dip-item:hover,
   .filter-item:hover{
-    border-color:#334567;
+    border-color:var(--accent-2);
   }
   .alg-item.active,
+  .dip-item.active,
   .filter-item.active{
     border-color:var(--accent-2);
-    box-shadow:0 0 0 1px var(--accent-2) inset;
-    background:linear-gradient(180deg,#12203b,#0e1a2f);
+    box-shadow:0 0 0 1px rgba(96,165,250,.7);
+    background:radial-gradient(circle at top left,#1d4ed8,#020617 55%);
   }
 
   .main-col{
@@ -116,25 +168,43 @@
     gap:16px;
   }
   .card{
-    background:var(--panel);
+    background:rgba(15,23,42,.96);
     border:1px solid var(--border);
-    border-radius:12px;
-    padding:14px;
+    border-radius:18px;
+    padding:16px 16px 10px;
+    box-shadow:0 18px 40px rgba(0,0,0,.6);
   }
-  .card h2{margin:0 0 8px 0;font-size:1.05rem}
+  .card-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    margin-bottom:6px;
+  }
+  .card h2{
+    margin:0;
+    font-size:1.05rem;
+  }
+  .pill{
+    font-size:.72rem;
+    padding:4px 9px;
+    border-radius:999px;
+    border:1px solid rgba(148,163,184,.7);
+    color:var(--muted);
+  }
   .muted{color:var(--muted)}
   .small{font-size:.82rem}
 
   .frame-wrap{
-    margin-top:8px;
-    border-radius:12px;
-    border:1px solid var(--border);
+    margin-top:10px;
+    border-radius:14px;
+    border:1px solid #020617;
     overflow:hidden;
     background:#020617;
   }
   .frame-wrap iframe{
     width:100%;
-    min-height:700px; /* adjust as you like */
+    min-height:720px;
     border:none;
     display:block;
     background:#020617;
@@ -143,14 +213,18 @@
 </head>
 <body>
 <header>
-  <h1>Algorithms Lab — Dashboard</h1>
-  <small>Navigate to your algorithm & filter pages</small>
+  <div>
+    <div class="tagline">CS LAB DASHBOARD</div>
+    <h1>Algorithms & Digital Image Processing</h1>
+  </div>
+  <small>Explore implementations from one place</small>
 </header>
 
 <!-- Main top tabs -->
 <div class="main-tabs">
-  <button class="main-tab active" data-tab="algos">Algorithms</button>
-  <button class="main-tab" data-tab="filters">Filters</button>
+  <button class="main-tab active" data-tab="algos"><span class="icon">🧮</span>Algorithms</button>
+  <button class="main-tab" data-tab="dip"><span class="icon">🖼️</span>DIP Utilities</button>
+  <button class="main-tab" data-tab="filters"><span class="icon">🎛️</span>Filters</button>
 </div>
 
 <!-- ================= TAB: ALGORITHMS ================= -->
@@ -158,29 +232,105 @@
   <div class="alg-layout">
     <!-- Sidebar -->
     <aside class="sidebar">
-      <h3>Algorithms</h3>
+      <h3>Design & Analysis of Algorithms</h3>
+      <p>Select any experiment to load its page.</p>
       <ul class="alg-list" id="algList">
-        <!-- CHANGE data-src values to match your real file names -->
-        <li class="alg-item active" data-src="knapsack_dp.html">0/1 Knapsack Dynamic Programming</li>
-        <li class="alg-item" data-src="knapsack_ga.html">0/1 Knapsack (Greedy Algorithm)</li>
-        <li class="alg-item" data-src="fractional_knapsack.html">Fractional Knapsack</li>
-        <li class="alg-item" data-src="coin_changing_dp.html">Coin Change Dynamic Programming</li>
-        <li class="alg-item" data-src="huffman_table.html">Huffman (Table Enc/Dec)</li>
-        <li class="alg-item" data-src="huffman_tree.html">Huffman (Image/Table)</li>
-        <li class="alg-item" data-src="arithematic_encoding_and_decoding.html">arithmetic Encoding and Decoding</li>
+        <!-- Update data-src paths if your file names differ -->
+        <li class="alg-item active" data-src="algorithms/TSP_branch_bound.html">
+          <span class="label">TSP — Branch &amp; Bound</span>
+          <span class="badge">algorithms/</span>
+        </li>
+        <li class="alg-item" data-src="algorithms/tsp_bruteforce.html">
+          <span class="label">TSP — Brute Force</span>
+          <span class="badge">algorithms/</span>
+        </li>
+        <li class="alg-item" data-src="algorithms/TSP_ga.html">
+          <span class="label">TSP — Genetic Algorithm</span>
+          <span class="badge">algorithms/</span>
+        </li>
+        <li class="alg-item" data-src="algorithms/kanpsack_ga.html">
+          <span class="label">0/1 Knapsack — Greedy</span>
+          <span class="badge">algorithms/</span>
+        </li>
+        <li class="alg-item" data-src="algorithms/Longest Common Subsequence.html">
+          <span class="label">Longest Common Subsequence</span>
+          <span class="badge">algorithms/</span>
+        </li>
+        <!-- Add more algorithms here if needed -->
       </ul>
     </aside>
 
     <!-- Right side: iframe viewer -->
     <div class="main-col">
       <div class="card">
-        <h2 id="algoTitle">0/1 Knapsack (DP)</h2>
+        <div class="card-header">
+          <h2 id="algoTitle">TSP — Branch &amp; Bound</h2>
+          <span class="pill">Folder: <strong>algorithms/</strong></span>
+        </div>
         <p class="muted small">
-          This panel loads your existing algorithm HTML files inside the frame below.
+          The selected experiment opens below inside the dashboard. Use the menu on the left to switch between algorithms.
         </p>
         <div class="frame-wrap">
           <!-- default page to load -->
-            <iframe id="algoFrame" src="knapsack_dp.html" title="Algorithm Viewer" loading="eager"></iframe>
+          <iframe id="algoFrame" src="algorithms/TSP_branch_bound.html" title="Algorithms Viewer" loading="eager"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= TAB: DIP ================= -->
+<div id="tab-dip" class="tab-panel">
+  <div class="alg-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h3>Digital Image Processing (Core)</h3>
+      <p>Contrast, histogram, matching &amp; resizing utilities.</p>
+      <ul class="dip-list" id="dipList">
+        <!-- Update data-src paths if your file names differ -->
+        <li class="dip-item active" data-src="DIP/contrast_stretching.html">
+          <span class="label">Contrast Stretching</span>
+          <span class="badge">DIP/</span>
+        </li>
+        <li class="dip-item" data-src="DIP/histogram_equa.html">
+          <span class="label">Histogram Equalisation</span>
+          <span class="badge">DIP/</span>
+        </li>
+        <li class="dip-item" data-src="DIP/convolution_padding.html">
+          <span class="label">Convolution &amp; Padding</span>
+          <span class="badge">DIP/</span>
+        </li>
+        <li class="dip-item" data-src="DIP/image_matching.html">
+          <span class="label">Image Matching</span>
+          <span class="badge">DIP/</span>
+        </li>
+        <li class="dip-item" data-src="DIP/min_max_matching.html">
+          <span class="label">Min–Max Matching</span>
+          <span class="badge">DIP/</span>
+        </li>
+        <li class="dip-item" data-src="DIP/resize_bilinear.html">
+          <span class="label">Resize — Bilinear</span>
+          <span class="badge">DIP/</span>
+        </li>
+        <li class="dip-item" data-src="DIP/resize_nearest_neighbor.html">
+          <span class="label">Resize — Nearest Neighbour</span>
+          <span class="badge">DIP/</span>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Right side: iframe viewer -->
+    <div class="main-col">
+      <div class="card">
+        <div class="card-header">
+          <h2 id="dipTitle">Contrast Stretching</h2>
+          <span class="pill">Folder: <strong>DIP/</strong></span>
+        </div>
+        <p class="muted small">
+          Core DIP utilities are rendered here. Run each experiment directly in the embedded page.
+        </p>
+        <div class="frame-wrap">
+          <iframe id="dipFrame" src="DIP/contrast_stretching.html" title="DIP Viewer" loading="lazy"></iframe>
         </div>
       </div>
     </div>
@@ -193,26 +343,44 @@
     <!-- Sidebar -->
     <aside class="sidebar">
       <h3>DIP Filters</h3>
+      <p>Spatial-domain filters and enhancement operators.</p>
       <ul class="filter-list" id="filterList">
-        <!-- CHANGE data-src values to match your real file names -->
-        <li class="filter-item active" data-src="spatial_filter.html">Spatial Filter</li>
-        <li class="filter-item" data-src="average.html">Average Filter</li>
-        <li class="filter-item" data-src="median.html">Median Filter</li>
-        <li class="filter-item" data-src="weighted_average_filter.html">Weighted Average Filter</li>
-        <li class="filter-item" data-src="laplician_enhencmnet.html">Laplacian Enhancement</li>
+        <!-- Update data-src paths if your file names differ -->
+        <li class="filter-item active" data-src="filters/spatial_filter.html">
+          <span class="label">Spatial Filter (Custom Kernel)</span>
+          <span class="badge">filters/</span>
+        </li>
+        <li class="filter-item" data-src="filters/average.html">
+          <span class="label">Mean / Average Filter</span>
+          <span class="badge">filters/</span>
+        </li>
+        <li class="filter-item" data-src="filters/median.html">
+          <span class="label">Median Filter</span>
+          <span class="badge">filters/</span>
+        </li>
+        <li class="filter-item" data-src="filters/weighted_average_filter.html">
+          <span class="label">Weighted Average Filter</span>
+          <span class="badge">filters/</span>
+        </li>
+        <li class="filter-item" data-src="filters/laplacian_enhancement.html">
+          <span class="label">Laplacian for Image Enhancement</span>
+          <span class="badge">filters/</span>
+        </li>
       </ul>
     </aside>
 
     <!-- Right side: iframe viewer -->
     <div class="main-col">
       <div class="card">
-        <h2 id="filterTitle">Spatial Filter</h2>
+        <div class="card-header">
+          <h2 id="filterTitle">Spatial Filter (Custom Kernel)</h2>
+          <span class="pill">Folder: <strong>filters/</strong></span>
+        </div>
         <p class="muted small">
-          This panel loads your existing DIP filter HTML files inside the frame below.
+          All filter experiments live in the <code>filters/</code> folder and are loaded here when selected.
         </p>
         <div class="frame-wrap">
-          <!-- default page to load -->
-          <iframe id="filterFrame" src="spatial_filter.html" loading="lazy"></iframe>
+          <iframe id="filterFrame" src="filters/spatial_filter.html" title="Filters Viewer" loading="lazy"></iframe>
         </div>
       </div>
     </div>
@@ -220,10 +388,11 @@
 </div>
 
 <script>
-/* ---------- Top-level tabs (Algorithms / Filters) ---------- */
+/* ---------- Top-level tabs (Algorithms / DIP / Filters) ---------- */
 const mainTabs = [...document.querySelectorAll('.main-tab')];
 const tabPanels = {
   algos: document.getElementById('tab-algos'),
+  dip: document.getElementById('tab-dip'),
   filters: document.getElementById('tab-filters')
 };
 
@@ -247,7 +416,22 @@ algoItems.forEach(item => {
     item.classList.add('active');
     const src = item.dataset.src;
     if (src) algoFrame.src = src;
-    algoTitle.textContent = item.textContent.trim();
+    algoTitle.textContent = item.querySelector('.label').textContent.trim();
+  });
+});
+
+/* ---------- DIP sidebar navigation ---------- */
+const dipItems = [...document.querySelectorAll('.dip-item')];
+const dipFrame = document.getElementById('dipFrame');
+const dipTitle = document.getElementById('dipTitle');
+
+dipItems.forEach(item => {
+  item.addEventListener('click', () => {
+    dipItems.forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    const src = item.dataset.src;
+    if (src) dipFrame.src = src;
+    dipTitle.textContent = item.querySelector('.label').textContent.trim();
   });
 });
 
@@ -262,7 +446,7 @@ filterItems.forEach(item => {
     item.classList.add('active');
     const src = item.dataset.src;
     if (src) filterFrame.src = src;
-    filterTitle.textContent = item.textContent.trim();
+    filterTitle.textContent = item.querySelector('.label').textContent.trim();
   });
 });
 </script>

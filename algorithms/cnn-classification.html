@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CNN Dense Layer — Binary & Multi-Class Visualizer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #020617;
+      --panel: #0f172a;
+      --panel-soft: #0b1220;
+      --border: #1e293b;
+      --accent: #38bdf8;
+      --accent2: #a855f7;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --good: #22c55e;
+      --danger: #f97373;
+      --warning: #facc15;
+    }
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;
+      background: radial-gradient(circle at top, #0f172a, #020617 60%);
+      color: var(--text);
+    }
+
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 14px 22px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(15,23,42,0.98);
+      backdrop-filter: blur(16px);
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .title-block h1 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(56,189,248,0.5);
+      color: var(--accent);
+      background: radial-gradient(circle at top, rgba(56,189,248,0.2), transparent);
+    }
+
+    .subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .header-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 11px;
+    }
+
+    .tag {
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.5);
+      color: var(--muted);
+      background: rgba(15,23,42,0.9);
+    }
+
+    main {
+      flex: 1;
+      padding: 18px 20px 24px;
+      display: grid;
+      grid-template-columns: minmax(280px, 340px) minmax(0, 1.4fr) minmax(0, 1.3fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 1100px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: radial-gradient(circle at top left, #111827, var(--panel));
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      padding: 14px 14px 16px;
+      position: relative;
+      box-shadow: 0 18px 32px rgba(15,23,42,0.9);
+      overflow: hidden;
+    }
+
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top right, rgba(56,189,248,0.05), transparent 60%);
+      pointer-events: none;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .panel-title {
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-pill {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.5);
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .panel-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .form-grid {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      font-size: 12px;
+    }
+
+    label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 10px;
+      border: 1px solid rgba(55,65,81,0.9);
+      background: rgba(15,23,42,0.9);
+      color: var(--text);
+      font-size: 12px;
+      outline: none;
+      transition: border .15s ease, box-shadow .15s ease, background .15s ease;
+    }
+
+    input[type="number"]:focus,
+    select:focus {
+      border-color: var(--accent);
+      background:#020617;
+      box-shadow:0 0 0 1px rgba(56,189,248,0.6);
+    }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance:none;
+    }
+
+    .field-group { display:flex; flex-direction:column; gap:4px; }
+    .field-row { display:flex; gap:8px; }
+
+    .radio-group {
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+    .radio-pill {
+      display:inline-flex;
+      align-items:center;
+      gap:5px;
+      padding:4px 9px;
+      border-radius:999px;
+      border:1px solid rgba(55,65,81,0.9);
+      background:rgba(15,23,42,0.9);
+      font-size:11px;
+      color:var(--muted);
+      cursor:pointer;
+      transition:border .15s ease, background .15s ease, color .15s ease;
+    }
+    .radio-pill input { accent-color:var(--accent); }
+    .radio-pill.active {
+      border-color:var(--accent);
+      background:radial-gradient(circle at top, rgba(56,189,248,0.24), rgba(15,23,42,0.96));
+      color:var(--text);
+    }
+
+    .hint {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .hint strong { color:var(--accent); font-weight:500; }
+
+    .btn-row {
+      margin-top: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    button {
+      border-radius: 999px;
+      border: 1px solid transparent;
+      background: none;
+      color: var(--text);
+      font-size: 12px;
+      padding: 6px 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: transform .12s ease, box-shadow .12s ease, border .12s ease, background .12s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      box-shadow: 0 10px 22px rgba(56,189,248,0.45);
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 30px rgba(56,189,248,0.6);
+    }
+
+    .btn-ghost {
+      border-color: rgba(148,163,184,0.6);
+      background: rgba(15,23,42,0.9);
+      color: var(--muted);
+    }
+    .btn-ghost:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .status-line {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--muted);
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+    }
+    .status-pill {
+      font-size:10px;
+      padding:2px 7px;
+      border-radius:999px;
+      border:1px solid rgba(56,189,248,0.5);
+      color:var(--accent);
+      background:rgba(15,23,42,0.9);
+    }
+
+    .error-text {
+      font-size:11px;
+      color:var(--danger);
+      margin-top:4px;
+    }
+
+    /* Visualization panel */
+    .vis-wrapper {
+      position: relative;
+      z-index:1;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .formula-box {
+      font-size:11px;
+      color:var(--muted);
+      padding:6px 8px;
+      border-radius:12px;
+      border:1px dashed rgba(148,163,184,0.5);
+      background:rgba(15,23,42,0.95);
+    }
+    .formula-box code {
+      font-family: "JetBrains Mono","Fira Code",monospace;
+      font-size:11px;
+      color:var(--accent);
+    }
+
+    svg {
+      width: 100%;
+      height: 260px;
+      border-radius: 14px;
+      background: radial-gradient(circle at center, #111827, #020617 80%);
+      border: 1px solid rgba(30,64,175,0.7);
+    }
+
+    .net-node {
+      stroke-width: 2;
+    }
+
+    .node-input {
+      fill:#22c55e;
+      stroke:#14532d;
+    }
+    .node-hidden {
+      fill:#eab308;
+      stroke:#92400e;
+    }
+    .node-output {
+      fill:#38bdf8;
+      stroke:#075985;
+    }
+
+    .edge-pos {
+      stroke:#4ade80;
+      stroke-width:1.3;
+    }
+    .edge-neg {
+      stroke:#f97373;
+      stroke-width:1.3;
+    }
+    .edge-zero {
+      stroke:#9ca3af;
+      stroke-dasharray:4 3;
+      stroke-width:1;
+    }
+
+    .node-label {
+      font-size:10px;
+      fill:#020617;
+      text-anchor:middle;
+      dominant-baseline:central;
+      font-weight:600;
+    }
+    .node-value {
+      font-size:10px;
+      fill:#e5e7eb;
+      text-anchor:middle;
+    }
+
+    .side-note {
+      font-size:10px;
+      color:var(--muted);
+      margin-top:3px;
+    }
+
+    /* Tables on right */
+    .tables-wrapper {
+      position:relative;
+      z-index:1;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      max-height:450px;
+      overflow:auto;
+      padding-right:4px;
+    }
+
+    .table-card {
+      border-radius:12px;
+      border:1px solid rgba(55,65,81,0.9);
+      background:rgba(15,23,42,0.96);
+      padding:7px 7px 9px;
+    }
+
+    .table-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:4px;
+    }
+    .table-title {
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+    }
+    .table-tag {
+      font-size:10px;
+      padding:2px 6px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,0.5);
+      color:var(--muted);
+    }
+
+    table {
+      width:100%;
+      border-collapse:collapse;
+      font-size:11px;
+      table-layout:fixed;
+    }
+    th, td {
+      border:1px solid rgba(55,65,81,0.9);
+      padding:4px 5px;
+      text-align:center;
+    }
+    th {
+      background:rgba(15,23,42,0.96);
+      color:var(--muted);
+    }
+    td {
+      background:rgba(15,23,42,0.98);
+    }
+    td input {
+      width:100%;
+      padding:3px 4px;
+      border-radius:8px;
+      border:1px solid rgba(55,65,81,0.9);
+      background:#020617;
+      color:var(--text);
+      font-size:11px;
+      outline:none;
+    }
+    td input:focus {
+      border-color:var(--accent);
+      box-shadow:0 0 0 1px rgba(56,189,248,0.55);
+    }
+
+    .small-note {
+      font-size:10px;
+      color:var(--muted);
+      margin-top:2px;
+    }
+
+    .output-highlight {
+      color:var(--good);
+      font-weight:500;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="title-block">
+      <h1>
+        Dense Layer Visualizer
+        <span class="badge">CNN Classification Head</span>
+      </h1>
+      <div class="subtitle">
+        3-layer network like your diagram: Inputs → Hidden → Output, with user-defined weights, biases and activations.
+      </div>
+    </div>
+    <div class="header-tags">
+      <span class="tag">Binary &amp; Multi-Class</span>
+      <span class="tag">Sigmoid · Softmax Output</span>
+      <span class="tag">x<sub>j</sub>=Σ w<sub>ij</sub>I<sub>i</sub>+b<sub>j</sub></span>
+    </div>
+  </header>
+
+  <main>
+    <!-- LEFT: configuration -->
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">
+            Configure Network
+            <span class="panel-pill">Inputs · Hidden · Output</span>
+          </div>
+          <div class="panel-sub">
+            Choose classification type, nodes and hidden activation. You will enter all inputs, weights and biases.
+          </div>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="field-group">
+          <label>Classification Type</label>
+          <div class="radio-group" id="classTypeGroup">
+            <label class="radio-pill active">
+              <input type="radio" name="ctype" value="binary" checked />
+              Binary (2 classes → 1 output)
+            </label>
+            <label class="radio-pill">
+              <input type="radio" name="ctype" value="multi" />
+              Multi-Class (≥ 3 outputs)
+            </label>
+          </div>
+          <div class="hint">
+            Final activation is <strong>Sigmoid</strong> for binary and <strong>Softmax</strong> for multi-class.
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <label for="numInputs">Input nodes</label>
+            <input type="number" id="numInputs" min="1" max="6" value="3" />
+            <div class="hint">Example: 3 features from CNN feature map.</div>
+          </div>
+          <div class="field-group">
+            <label for="numHidden">Hidden nodes</label>
+            <input type="number" id="numHidden" min="1" max="8" value="4" />
+            <div class="hint">Default matches your diagram (4 hidden neurons).</div>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="numOutputs">Output nodes</label>
+          <input type="number" id="numOutputs" min="1" max="6" value="1" />
+          <div class="hint">
+            For <strong>binary</strong> this is forced to <strong>1</strong>.  
+            For multi-class you can set 3, 4, ...
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="hiddenAct">Hidden Activation</label>
+          <select id="hiddenAct">
+            <option value="threshold">Threshold</option>
+            <option value="sigmoid">Sigmoid</option>
+            <option value="tanh">Tanh</option>
+            <option value="relu" selected>ReLU</option>
+          </select>
+          <div class="hint">
+            This activation is applied to the hidden layer outputs.  
+            Output layer uses Sigmoid/Softmax depending on classification type.
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-primary" id="generateBtn">⚙️ Generate Tables</button>
+          <button class="btn-ghost" id="runBtn">🚀 Run Forward Pass</button>
+        </div>
+
+        <div class="status-line">
+          <span id="finalActLabel">
+            Final activation: <span class="output-highlight">Sigmoid (Binary)</span>
+          </span>
+          <span class="status-pill" id="statusText">Ready · No computation yet</span>
+        </div>
+        <div id="errorBox" class="error-text" style="display:none;"></div>
+      </div>
+    </section>
+
+    <!-- MIDDLE: network visualization -->
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">
+            Network Visualization
+            <span class="panel-pill">Diagram with Updated Values</span>
+          </div>
+          <div class="panel-sub">
+            Structure similar to the reference image. Values inside neurons update after calculations.
+          </div>
+        </div>
+      </div>
+
+      <div class="vis-wrapper">
+        <div class="formula-box">
+          Formula for each neuron in a layer:
+          <br />
+          <code>x<sub>j</sub> = Σ (w<sub>ij</sub> · I<sub>i</sub>) + b<sub>j</sub></code>
+          <br />
+          where I<sub>i</sub> are inputs to the layer, w<sub>ij</sub> are edges (weights), and b<sub>j</sub> is the bias.
+        </div>
+
+        <svg id="networkSvg" viewBox="0 0 520 260"></svg>
+        <div class="side-note">
+          Green: input nodes, Yellow: hidden nodes, Blue: output nodes.  
+          Edges are green for positive weight, red for negative, grey for zero.
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: tables and matrix -->
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">
+            Inputs · Weights · Biases
+            <span class="panel-pill">Matrix Using x<sub>j</sub>=Σ w<sub>ij</sub>I<sub>i</sub>+b<sub>j</sub></span>
+          </div>
+          <div class="panel-sub">
+            Fill in all values, then run the forward pass to see hidden matrix and final outputs.
+          </div>
+        </div>
+      </div>
+
+      <div class="tables-wrapper">
+        <div class="table-card">
+          <div class="table-header">
+            <span class="table-title">Input Values</span>
+            <span class="table-tag">I<sub>i</sub></span>
+          </div>
+          <div id="inputsTable"></div>
+          <div class="small-note">Single sample inputs, e.g. I<sub>1</sub>, I<sub>2</sub>, I<sub>3</sub>.</div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-header">
+            <span class="table-title">Weights: Input → Hidden</span>
+            <span class="table-tag">w<sup>(1)</sup><sub>ij</sub></span>
+          </div>
+          <div id="w1Table"></div>
+          <div class="small-note">Each column j uses x<sub>j</sub> = Σ w<sub>ij</sub>I<sub>i</sub> + b<sub>j</sub>.</div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-header">
+            <span class="table-title">Biases: Hidden Layer</span>
+            <span class="table-tag">b<sup>(1)</sup><sub>j</sub></span>
+          </div>
+          <div id="b1Table"></div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-header">
+            <span class="table-title">Weights: Hidden → Output</span>
+            <span class="table-tag">w<sup>(2)</sup><sub>jk</sub></span>
+          </div>
+          <div id="w2Table"></div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-header">
+            <span class="table-title">Biases: Output Layer</span>
+            <span class="table-tag">b<sup>(2)</sup><sub>k</sub></span>
+          </div>
+          <div id="b2Table"></div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-header">
+            <span class="table-title">Hidden Layer Matrix (Using Formula)</span>
+            <span class="table-tag">x<sub>j</sub>, h<sub>j</sub></span>
+          </div>
+          <div id="hiddenMatrixTable"></div>
+          <div class="small-note">
+            x<sub>j</sub> = Σ w<sup>(1)</sup><sub>ij</sub>I<sub>i</sub> + b<sup>(1)</sup><sub>j</sub>,  
+            h<sub>j</sub> = HiddenActivation(x<sub>j</sub>).
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-header">
+            <span class="table-title">Final Outputs</span>
+            <span class="table-tag" id="finalTag">Sigmoid (Binary)</span>
+          </div>
+          <div id="outputTable"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+  // ---------- Math utilities ---------- //
+  function sigmoid(x) { return 1 / (1 + Math.exp(-x)); }
+  function tanhAct(x) { return Math.tanh(x); }
+  function relu(x) { return x > 0 ? x : 0; }
+  function threshold(x) { return x >= 0 ? 1 : 0; }
+
+  function softmax(vec) {
+    if (!vec.length) return [];
+    const max = Math.max(...vec);
+    const exps = vec.map(v => Math.exp(v - max));
+    const sum = exps.reduce((a,b) => a+b, 0);
+    return exps.map(e => e / sum);
+  }
+
+  function applyHiddenActivation(x, type) {
+    switch(type) {
+      case "threshold": return threshold(x);
+      case "sigmoid": return sigmoid(x);
+      case "tanh": return tanhAct(x);
+      case "relu": return relu(x);
+      default: return x;
+    }
+  }
+
+  // ---------- DOM references ---------- //
+  const classTypeGroup = document.getElementById("classTypeGroup");
+  const numInputsEl = document.getElementById("numInputs");
+  const numHiddenEl = document.getElementById("numHidden");
+  const numOutputsEl = document.getElementById("numOutputs");
+  const hiddenActEl = document.getElementById("hiddenAct");
+  const generateBtn = document.getElementById("generateBtn");
+  const runBtn = document.getElementById("runBtn");
+  const finalActLabel = document.getElementById("finalActLabel");
+  const finalTag = document.getElementById("finalTag");
+  const statusText = document.getElementById("statusText");
+  const errorBox = document.getElementById("errorBox");
+
+  const inputsTableDiv = document.getElementById("inputsTable");
+  const w1TableDiv = document.getElementById("w1Table");
+  const b1TableDiv = document.getElementById("b1Table");
+  const w2TableDiv = document.getElementById("w2Table");
+  const b2TableDiv = document.getElementById("b2Table");
+  const hiddenMatrixTableDiv = document.getElementById("hiddenMatrixTable");
+  const outputTableDiv = document.getElementById("outputTable");
+
+  const networkSvg = document.getElementById("networkSvg");
+
+  // Keep references to SVG text elements to update values
+  let svgNodeValueRefs = { inputs: [], hidden: [], outputs: [] };
+
+  function getClassType() {
+    const radios = classTypeGroup.querySelectorAll("input[type=radio]");
+    for (const r of radios) if (r.checked) return r.value;
+    return "binary";
+  }
+
+  function updateFinalActText() {
+    const type = getClassType();
+    if (type === "binary") {
+      finalActLabel.innerHTML = 'Final activation: <span class="output-highlight">Sigmoid (Binary)</span>';
+      finalTag.textContent = "Sigmoid (Binary)";
+      numOutputsEl.value = 1;
+      numOutputsEl.disabled = true;
+    } else {
+      finalActLabel.innerHTML = 'Final activation: <span class="output-highlight">Softmax (Multi-Class)</span>';
+      finalTag.textContent = "Softmax (Multi-Class)";
+      numOutputsEl.disabled = false;
+      if (+numOutputsEl.value < 3) numOutputsEl.value = 3;
+    }
+  }
+
+  classTypeGroup.addEventListener("change", (e) => {
+    classTypeGroup.querySelectorAll(".radio-pill").forEach(p => p.classList.remove("active"));
+    const pill = e.target.closest(".radio-pill");
+    if (pill) pill.classList.add("active");
+    updateFinalActText();
+  });
+
+  updateFinalActText();
+
+  // ---------- Table generators ---------- //
+  function renderInputsTable(n) {
+    let html = '<table><thead><tr><th>Node</th><th>Value I<sub>i</sub></th></tr></thead><tbody>';
+    for (let i = 1; i <= n; i++) {
+      html += `<tr>
+        <td>I<sub>${i}</sub></td>
+        <td><input type="number" step="any" id="in_${i}" value="0" /></td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    inputsTableDiv.innerHTML = html;
+  }
+
+  function renderW1Table(nIn, nHid) {
+    let html = "<table><thead><tr><th>From / To</th>";
+    for (let j = 1; j <= nHid; j++) html += `<th>Hidden ${j}</th>`;
+    html += "</tr></thead><tbody>";
+    for (let i = 1; i <= nIn; i++) {
+      html += `<tr><td>I<sub>${i}</sub></td>`;
+      for (let j = 1; j <= nHid; j++) {
+        html += `<td><input type="number" step="any" id="w1_${i}_${j}" value="0" /></td>`;
+      }
+      html += "</tr>";
+    }
+    html += "</tbody></table>";
+    w1TableDiv.innerHTML = html;
+  }
+
+  function renderB1Table(nHid) {
+    let html = "<table><thead><tr>";
+    for (let j = 1; j <= nHid; j++) html += `<th>b<sup>(1)</sup><sub>${j}</sub></th>`;
+    html += "</tr></thead><tbody><tr>";
+    for (let j = 1; j <= nHid; j++) html += `<td><input type="number" step="any" id="b1_${j}" value="0" /></td>`;
+    html += "</tr></tbody></table>";
+    b1TableDiv.innerHTML = html;
+  }
+
+  function renderW2Table(nHid, nOut) {
+    let html = "<table><thead><tr><th>From / To</th>";
+    for (let k = 1; k <= nOut; k++) html += `<th>Output ${k}</th>`;
+    html += "</tr></thead><tbody>";
+    for (let j = 1; j <= nHid; j++) {
+      html += `<tr><td>h<sub>${j}</sub></td>`;
+      for (let k = 1; k <= nOut; k++) {
+        html += `<td><input type="number" step="any" id="w2_${j}_${k}" value="0" /></td>`;
+      }
+      html += "</tr>";
+    }
+    html += "</tbody></table>";
+    w2TableDiv.innerHTML = html;
+  }
+
+  function renderB2Table(nOut) {
+    let html = "<table><thead><tr>";
+    for (let k = 1; k <= nOut; k++) html += `<th>b<sup>(2)</sup><sub>${k}</sub></th>`;
+    html += "</tr></thead><tbody><tr>";
+    for (let k = 1; k <= nOut; k++) html += `<td><input type="number" step="any" id="b2_${k}" value="0" /></td>`;
+    html += "</tr></tbody></table>";
+    b2TableDiv.innerHTML = html;
+  }
+
+  function generateAllTables() {
+    errorBox.style.display = "none";
+    let nIn = Math.max(1, Math.min(6, parseInt(numInputsEl.value || "1", 10)));
+    let nHid = Math.max(1, Math.min(8, parseInt(numHiddenEl.value || "1", 10)));
+    let nOut = Math.max(1, Math.min(6, parseInt(numOutputsEl.value || "1", 10)));
+
+    const type = getClassType();
+    if (type === "binary") {
+      nOut = 1;
+    } else if (nOut < 3) {
+      nOut = 3;
+    }
+
+    numInputsEl.value = nIn;
+    numHiddenEl.value = nHid;
+    numOutputsEl.value = nOut;
+
+    renderInputsTable(nIn);
+    renderW1Table(nIn, nHid);
+    renderB1Table(nHid);
+    renderW2Table(nHid, nOut);
+    renderB2Table(nOut);
+
+    drawNetworkDiagram(nIn, nHid, nOut, null, null);
+    statusText.textContent = `Network ready · ${nIn} inputs, ${nHid} hidden, ${nOut} outputs`;
+    hiddenMatrixTableDiv.innerHTML = "";
+    outputTableDiv.innerHTML = "";
+  }
+
+  generateBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    generateAllTables();
+  });
+
+  // initial
+  generateAllTables();
+
+  // ---------- Read values & compute ---------- //
+  function readInputs(nIn) {
+    const v = [];
+    for (let i = 1; i <= nIn; i++) {
+      v.push(parseFloat(document.getElementById(`in_${i}`).value || "0"));
+    }
+    return v;
+  }
+
+  function readMatrixW1(nIn, nHid) {
+    const W = [];
+    for (let i = 1; i <= nIn; i++) {
+      const row = [];
+      for (let j = 1; j <= nHid; j++) {
+        row.push(parseFloat(document.getElementById(`w1_${i}_${j}`).value || "0"));
+      }
+      W.push(row);
+    }
+    return W;
+  }
+
+  function readB1(nHid) {
+    const b = [];
+    for (let j = 1; j <= nHid; j++) {
+      b.push(parseFloat(document.getElementById(`b1_${j}`).value || "0"));
+    }
+    return b;
+  }
+
+  function readMatrixW2(nHid, nOut) {
+    const W = [];
+    for (let j = 1; j <= nHid; j++) {
+      const row = [];
+      for (let k = 1; k <= nOut; k++) {
+        row.push(parseFloat(document.getElementById(`w2_${j}_${k}`).value || "0"));
+      }
+      W.push(row);
+    }
+    return W;
+  }
+
+  function readB2(nOut) {
+    const b = [];
+    for (let k = 1; k <= nOut; k++) {
+      b.push(parseFloat(document.getElementById(`b2_${k}`).value || "0"));
+    }
+    return b;
+  }
+
+  function runForward() {
+    errorBox.style.display = "none";
+    const nIn = parseInt(numInputsEl.value || "1", 10);
+    const nHid = parseInt(numHiddenEl.value || "1", 10);
+    const nOut = parseInt(numOutputsEl.value || "1", 10);
+    if (!nIn || !nHid || !nOut) {
+      errorBox.textContent = "Please generate network tables first.";
+      errorBox.style.display = "block";
+      return;
+    }
+
+    const inputs = readInputs(nIn);
+    const W1 = readMatrixW1(nIn, nHid);
+    const b1 = readB1(nHid);
+    const W2 = readMatrixW2(nHid, nOut);
+    const b2 = readB2(nOut);
+
+    // Hidden layer: x_j = Σ w_ij I_i + b_j
+    const hiddenPre = new Array(nHid).fill(0);
+    const hiddenAct = new Array(nHid).fill(0);
+    for (let j = 0; j < nHid; j++) {
+      let sum = 0;
+      for (let i = 0; i < nIn; i++) {
+        sum += W1[i][j] * inputs[i];
+      }
+      const xj = sum + b1[j];
+      hiddenPre[j] = xj;
+      hiddenAct[j] = applyHiddenActivation(xj, hiddenActEl.value);
+    }
+
+    // Output layer: z_k = Σ w_jk h_j + b_k
+    const outPre = new Array(nOut).fill(0);
+    for (let k = 0; k < nOut; k++) {
+      let sum = 0;
+      for (let j = 0; j < nHid; j++) {
+        sum += W2[j][k] * hiddenAct[j];
+      }
+      outPre[k] = sum + b2[k];
+    }
+
+    const type = getClassType();
+    let outFinal;
+    if (type === "binary") {
+      outFinal = [sigmoid(outPre[0])];
+    } else {
+      outFinal = softmax(outPre);
+    }
+
+    drawNetworkDiagram(nIn, nHid, nOut, hiddenAct, outFinal);
+    renderHiddenMatrixTable(inputs, W1, b1, hiddenPre, hiddenAct);
+    renderOutputTable(outPre, outFinal, type);
+
+    const predicted =
+      type === "binary"
+        ? (outFinal[0] >= 0.5 ? "Positive class (1)" : "Negative class (0)")
+        : `Class ${outFinal.indexOf(Math.max(...outFinal)) + 1}`;
+    statusText.textContent = `Forward pass complete · Predicted: ${predicted}`;
+  }
+
+  runBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    runForward();
+  });
+
+  // ---------- Render hidden matrix table ---------- //
+  function renderHiddenMatrixTable(inputs, W1, b1, hiddenPre, hiddenAct) {
+    let html = "<table><thead><tr>";
+    html += "<th>Neuron j</th><th>Σ w<sub>ij</sub>I<sub>i</sub></th><th>+ b<sub>j</sub></th><th>x<sub>j</sub></th><th>h<sub>j</sub></th>";
+    html += "</tr></thead><tbody>";
+
+    for (let j = 0; j < hiddenPre.length; j++) {
+      let sumTerm = "";
+      for (let i = 0; i < inputs.length; i++) {
+        const w = W1[i][j];
+        const I = inputs[i];
+        const term = `(${w.toFixed(3)}×${I.toFixed(3)})`;
+        sumTerm += (i === 0 ? "" : " + ") + term;
+      }
+      const linear = hiddenPre[j];
+      const hj = hiddenAct[j];
+      html += `<tr>
+        <td>Hidden ${j+1}</td>
+        <td style="text-align:left">${sumTerm}</td>
+        <td>${b1[j].toFixed(3)}</td>
+        <td>${linear.toFixed(4)}</td>
+        <td class="output-highlight">${hj.toFixed(4)}</td>
+      </tr>`;
+    }
+
+    html += "</tbody></table>";
+    hiddenMatrixTableDiv.innerHTML = html;
+  }
+
+  function renderOutputTable(outPre, outFinal, type) {
+    let html = "<table><thead><tr><th>Output k</th><th>Pre-activation z<sub>k</sub></th><th>Final</th></tr></thead><tbody>";
+    for (let k = 0; k < outPre.length; k++) {
+      const name = type === "binary" ? "Class 1 (positive)" : `Class ${k+1}`;
+      html += `<tr>
+        <td>${name}</td>
+        <td>${outPre[k].toFixed(4)}</td>
+        <td class="output-highlight">${outFinal[k].toFixed(4)}</td>
+      </tr>`;
+    }
+    html += "</tbody></table>";
+    outputTableDiv.innerHTML = html;
+  }
+
+  // ---------- SVG network drawing ---------- //
+  function clearSvg() {
+    while (networkSvg.firstChild) networkSvg.removeChild(networkSvg.firstChild);
+    svgNodeValueRefs = { inputs: [], hidden: [], outputs: [] };
+  }
+
+  function drawNetworkDiagram(nIn, nHid, nOut, hiddenAct, outFinal) {
+    clearSvg();
+
+    const width = 520;
+    const height = 260;
+    const layerX = {
+      input: 80,
+      hidden: 260,
+      output: 430
+    };
+
+    function yPositions(count) {
+      const top = 40, bottom = height - 40;
+      const step = (bottom - top) / (count + 1);
+      const ys = [];
+      for (let i = 1; i <= count; i++) ys.push(top + i*step);
+      return ys;
+    }
+
+    const yIn = yPositions(nIn);
+    const yHid = yPositions(nHid);
+    const yOut = yPositions(nOut);
+
+    // Draw edges: input -> hidden
+    for (let i = 0; i < nIn; i++) {
+      for (let j = 0; j < nHid; j++) {
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", layerX.input+22);
+        line.setAttribute("y1", yIn[i]);
+        line.setAttribute("x2", layerX.hidden-22);
+        line.setAttribute("y2", yHid[j]);
+        line.classList.add("edge-zero");
+        networkSvg.appendChild(line);
+      }
+    }
+
+    // hidden -> output
+    for (let j = 0; j < nHid; j++) {
+      for (let k = 0; k < nOut; k++) {
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", layerX.hidden+22);
+        line.setAttribute("y1", yHid[j]);
+        line.setAttribute("x2", layerX.output-22);
+        line.setAttribute("y2", yOut[k]);
+        line.classList.add("edge-zero");
+        networkSvg.appendChild(line);
+      }
+    }
+
+    // Helper to draw a neuron + labels
+    function drawNeuron(x, y, label, type, valueText) {
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.setAttribute("cx", x);
+      circle.setAttribute("cy", y);
+      circle.setAttribute("r", 16);
+      circle.classList.add("net-node");
+      if (type === "input") circle.classList.add("node-input");
+      else if (type === "hidden") circle.classList.add("node-hidden");
+      else circle.classList.add("node-output");
+      networkSvg.appendChild(circle);
+
+      const tLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      tLabel.setAttribute("x", x);
+      tLabel.setAttribute("y", y);
+      tLabel.classList.add("node-label");
+      tLabel.textContent = label;
+      networkSvg.appendChild(tLabel);
+
+      const tVal = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      tVal.setAttribute("x", x);
+      tVal.setAttribute("y", y + 25);
+      tVal.classList.add("node-value");
+      tVal.textContent = valueText || "";
+      networkSvg.appendChild(tVal);
+
+      return tVal;
+    }
+
+    // draw input nodes
+    for (let i = 0; i < nIn; i++) {
+      const valText = ""; // filled after forward if needed
+      const tVal = drawNeuron(layerX.input, yIn[i], `I${i+1}`, "input", valText);
+      svgNodeValueRefs.inputs.push(tVal);
+    }
+    // hidden
+    for (let j = 0; j < nHid; j++) {
+      const text = hiddenAct ? `h${j+1}=${hiddenAct[j].toFixed(2)}` : "";
+      const tVal = drawNeuron(layerX.hidden, yHid[j], `${j+1}`, "hidden", text);
+      svgNodeValueRefs.hidden.push(tVal);
+    }
+    // output
+    for (let k = 0; k < nOut; k++) {
+      const text = outFinal ? `y${k+1}=${outFinal[k].toFixed(2)}` : "";
+      const tVal = drawNeuron(layerX.output, yOut[k], `${k+1}`, "output", text);
+      svgNodeValueRefs.outputs.push(tVal);
+    }
+  }
+
+</script>
+</body>
+</html>
