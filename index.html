@@ -280,7 +280,7 @@
   <button class="main-tab" data-tab="filters"><span class="icon">🎛️</span>Filters</button>
 </div>
 
-<!-- ================= TAB: HOME (OVERVIEW) ================= -->
+<!-- ================= TAB: HOME ================= -->
 <div id="tab-home" class="tab-panel active">
   <section class="hero">
     <h2>Welcome to the Algorithms & DIP Dashboard</h2>
@@ -294,8 +294,8 @@
       <div class="home-card" data-goto="algos">
         <h3 class="home-card-title">Algorithms Workspace</h3>
         <p class="home-card-sub">
-          Knapsack, TSP (Brute Force / Branch &amp; Bound / GA &amp; benchmarks),
-          Coin Change, LCS, Huffman, CNN classification, Arithmetic coding and more.
+          Knapsack, TSP (Brute Force / Branch &amp; Bound / GA / Nearest Neighbor &amp; benchmarks),
+          Coin Change, LCS, Huffman, CNN, Arithmetic coding and more.
         </p>
         <div class="home-card-footer">Open algorithms workspace →</div>
       </div>
@@ -324,7 +324,6 @@
 <!-- ================= TAB: ALGORITHMS ================= -->
 <div id="tab-algos" class="tab-panel">
   <div class="alg-layout">
-    <!-- Sidebar -->
     <aside class="sidebar">
       <h3>Design & Analysis of Algorithms</h3>
       <p>Select any experiment to load its HTML page on the right.</p>
@@ -354,6 +353,10 @@
         </li>
         <li class="alg-item" data-src="algorithms/TSP_ga.html">
           <span class="label">TSP — Genetic Algorithm (Interactive)</span>
+          <span class="badge">TSP core</span>
+        </li>
+        <li class="alg-item" data-src="algorithms/nearest_neighbor.html">
+          <span class="label">TSP — Nearest Neighbor Heuristic (from file)</span>
           <span class="badge">TSP core</span>
         </li>
 
@@ -421,7 +424,6 @@
       </ul>
     </aside>
 
-    <!-- Right side: iframe viewer -->
     <div class="main-col">
       <div class="card">
         <div class="card-header">
@@ -433,7 +435,6 @@
           the left to switch between different programs.
         </p>
         <div class="frame-wrap">
-          <!-- default page to load -->
           <iframe id="algoFrame" src="algorithms/knapsack_dp.html"
                   title="Algorithms Viewer" loading="eager"></iframe>
         </div>
@@ -445,7 +446,6 @@
 <!-- ================= TAB: DIP ================= -->
 <div id="tab-dip" class="tab-panel">
   <div class="alg-layout">
-    <!-- Sidebar -->
     <aside class="sidebar">
       <h3>Digital Image Processing — Core</h3>
       <p>Contrast, histogram, convolution, matching &amp; resizing utilities.</p>
@@ -481,7 +481,6 @@
       </ul>
     </aside>
 
-    <!-- Right side: iframe viewer -->
     <div class="main-col">
       <div class="card">
         <div class="card-header">
@@ -504,7 +503,6 @@
 <!-- ================= TAB: FILTERS ================= -->
 <div id="tab-filters" class="tab-panel">
   <div class="alg-layout">
-    <!-- Sidebar -->
     <aside class="sidebar">
       <h3>DIP Filters (Spatial Domain)</h3>
       <p>Mean, median, weighted filters and Laplacian enhancement.</p>
@@ -532,7 +530,6 @@
       </ul>
     </aside>
 
-    <!-- Right side: iframe viewer -->
     <div class="main-col">
       <div class="card">
         <div class="card-header">
@@ -553,7 +550,7 @@
 </div>
 
 <script>
-/* ---------- Top-level tabs (Home / Algorithms / DIP / Filters) ---------- */
+/* ---------- Top-level tabs ---------- */
 const mainTabs = [...document.querySelectorAll('.main-tab')];
 const tabPanels = {
   home: document.getElementById('tab-home'),
@@ -561,7 +558,6 @@ const tabPanels = {
   dip: document.getElementById('tab-dip'),
   filters: document.getElementById('tab-filters')
 };
-
 mainTabs.forEach(btn => {
   btn.addEventListener('click', () => {
     mainTabs.forEach(b => b.classList.remove('active'));
@@ -572,8 +568,7 @@ mainTabs.forEach(btn => {
 });
 
 /* ---------- Home cards navigation ---------- */
-const homeCards = [...document.querySelectorAll('.home-card')];
-homeCards.forEach(card => {
+document.querySelectorAll('.home-card').forEach(card => {
   card.addEventListener('click', () => {
     const target = card.dataset.goto;
     const btn = document.querySelector('.main-tab[data-tab="' + target + '"]');
@@ -585,7 +580,6 @@ homeCards.forEach(card => {
 const algoItems = [...document.querySelectorAll('.alg-item')];
 const algoFrame = document.getElementById('algoFrame');
 const algoTitle = document.getElementById('algoTitle');
-
 algoItems.forEach(item => {
   item.addEventListener('click', () => {
     algoItems.forEach(i => i.classList.remove('active'));
@@ -601,7 +595,6 @@ algoItems.forEach(item => {
 const dipItems = [...document.querySelectorAll('.dip-item')];
 const dipFrame = document.getElementById('dipFrame');
 const dipTitle = document.getElementById('dipTitle');
-
 dipItems.forEach(item => {
   item.addEventListener('click', () => {
     dipItems.forEach(i => i.classList.remove('active'));
@@ -617,7 +610,6 @@ dipItems.forEach(item => {
 const filterItems = [...document.querySelectorAll('.filter-item')];
 const filterFrame = document.getElementById('filterFrame');
 const filterTitle = document.getElementById('filterTitle');
-
 filterItems.forEach(item => {
   item.addEventListener('click', () => {
     filterItems.forEach(i => i.classList.remove('active'));
