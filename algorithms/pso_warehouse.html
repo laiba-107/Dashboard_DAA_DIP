@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PSO – Best Warehouse Location</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111827;
+      color: #f9fafb;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+    }
+    h1 {
+      font-size: 20px;
+      margin: 4px 0;
+    }
+    #controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      font-size: 14px;
+    }
+    label {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    input[type="range"] {
+      width: 120px;
+    }
+    button {
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background: #1f2937;
+      color: #f9fafb;
+    }
+    button:hover {
+      background: #374151;
+    }
+    #canvas {
+      border-radius: 8px;
+      background: #020617;
+      box-shadow: 0 0 12px rgba(0,0,0,0.5);
+    }
+    #stats {
+      font-size: 13px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>PSO – Best Warehouse Location</h1>
+
+  <div id="controls">
+    <label>
+      Particles:
+      <input type="range" id="numParticles" min="10" max="80" value="40">
+      <span id="numParticlesVal">40</span>
+    </label>
+
+    <label>
+      Inertia w:
+      <input type="range" id="wRange" min="0.2" max="0.95" step="0.05" value="0.7">
+      <span id="wVal">0.7</span>
+    </label>
+
+    <label>
+      c1 (self):
+      <input type="range" id="c1Range" min="0.0" max="3.0" step="0.1" value="1.5">
+      <span id="c1Val">1.5</span>
+    </label>
+
+    <label>
+      c2 (swarm):
+      <input type="range" id="c2Range" min="0.0" max="3.0" step="0.1" value="1.5">
+      <span id="c2Val">1.5</span>
+    </label>
+
+    <button id="resetBtn">Reset Swarm</button>
+    <button id="toggleBtn">Pause</button>
+  </div>
+
+  <canvas id="canvas" width="700" height="450"></canvas>
+
+  <div id="stats">
+    <div>Best Cost: <span id="bestCostSpan">–</span></div>
+    <div>Best Warehouse Location: (<span id="bestXSpan">–</span>, <span id="bestYSpan">–</span>)</div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const numParticlesSlider = document.getElementById("numParticles");
+    const numParticlesVal = document.getElementById("numParticlesVal");
+
+    const wRange = document.getElementById("wRange");
+    const wVal   = document.getElementById("wVal");
+
+    const c1Range = document.getElementById("c1Range");
+    const c1Val   = document.getElementById("c1Val");
+
+    const c2Range = document.getElementById("c2Range");
+    const c2Val   = document.getElementById("c2Val");
+
+    const resetBtn  = document.getElementById("resetBtn");
+    const toggleBtn = document.getElementById("toggleBtn");
+
+    const bestCostSpan = document.getElementById("bestCostSpan");
+    const bestXSpan    = document.getElementById("bestXSpan");
+    const bestYSpan    = document.getElementById("bestYSpan");
+
+    let running = true;
+
+    // Example map (you can change these coordinates)
+    // Blue circles = stores (we want to be NEAR these)
+    const stores = [
+      { x: 120, y: 100 },
+      { x: 180, y: 200 },
+      { x: 80,  y: 280 },
+      { x: 220, y: 60  }
+    ];
+
+    // Red squares = residential zones (we want to be FAR from these)
+    const residentialZones = [
+      { x: 520, y: 100 },
+      { x: 600, y: 180 },
+      { x: 500, y: 260 },
+      { x: 620, y: 320 }
+    ];
+
+    // If warehouse is closer than this distance to a residential zone,
+    // we apply a penalty in the cost function.
+    const safeRadius     = 90;
+    const penaltyWeight  = 2.0;
+
+    const width  = canvas.width;
+    const height = canvas.height;
+
+    let particles = [];
+    let globalBest = {
+      position: { x: Math.random() * width, y: Math.random() * height },
+      cost: Infinity
+    };
+
+    // For slowing down the simulation:
+    let frameCount = 0;
+    const UPDATE_EVERY_N_FRAMES = 5; // bigger = slower animation
+
+    function distance(x1, y1, x2, y2) {
+      const dx = x1 - x2;
+      const dy = y1 - y2;
+      return Math.sqrt(dx*dx + dy*dy);
+    }
+
+    // Cost function: want warehouse close to stores, far from residential
+    function warehouseCost(x, y) {
+      // 1) Sum of distances to stores (we want this LOW)
+      let storeDistSum = 0;
+      for (const s of stores) {
+        storeDistSum += distance(x, y, s.x, s.y);
+      }
+
+      // 2) Penalty if too close to residential zones
+      let penalty = 0;
+      for (const r of residentialZones) {
+        const d = distance(x, y, r.x, r.y);
+        if (d < safeRadius) {
+          const diff = safeRadius - d;
+          // Quadratic penalty so very close is heavily punished
+          penalty += diff * diff;
+        }
+      }
+
+      return storeDistSum + penaltyWeight * penalty;
+    }
+
+    function createParticle() {
+      const x = Math.random() * width;
+      const y = Math.random() * height;
+
+      // Slightly smaller initial velocities so they don't zoom too fast
+      const vx = (Math.random() - 0.5) * 2;
+      const vy = (Math.random() - 0.5) * 2;
+
+      const cost = warehouseCost(x, y);
+      return {
+        position: { x, y },
+        velocity: { x: vx, y: vy },
+        bestPosition: { x, y }, // personal best position
+        bestCost: cost          // personal best cost
+      };
+    }
+
+    function initSwarm() {
+      particles = [];
+      globalBest.cost = Infinity;
+
+      const n = parseInt(numParticlesSlider.value, 10);
+      for (let i = 0; i < n; i++) {
+        const p = createParticle();
+        particles.push(p);
+        if (p.bestCost < globalBest.cost) {
+          globalBest.position = { ...p.position };
+          globalBest.cost = p.bestCost;
+        }
+      }
+    }
+
+    function updateParticles() {
+      const w  = parseFloat(wRange.value);  // inertia: keep old velocity
+      const c1 = parseFloat(c1Range.value); // cognitive: trust yourself (personal best)
+      const c2 = parseFloat(c2Range.value); // social: trust swarm (global best)
+
+      const maxVel = 3; // cap velocity for more controlled motion
+
+      for (const p of particles) {
+        const r1 = Math.random();
+        const r2 = Math.random();
+
+        // Standard PSO velocity update:
+        // inertia*w + c1*(personal_best - current) + c2*(global_best - current)
+        p.velocity.x = w * p.velocity.x
+          + c1 * r1 * (p.bestPosition.x - p.position.x)
+          + c2 * r2 * (globalBest.position.x - p.position.x);
+        p.velocity.y = w * p.velocity.y
+          + c1 * r1 * (p.bestPosition.y - p.position.y)
+          + c2 * r2 * (globalBest.position.y - p.position.y);
+
+        // Limit velocity so particles don't move too fast
+        if (p.velocity.x > maxVel)  p.velocity.x = maxVel;
+        if (p.velocity.x < -maxVel) p.velocity.x = -maxVel;
+        if (p.velocity.y > maxVel)  p.velocity.y = maxVel;
+        if (p.velocity.y < -maxVel) p.velocity.y = -maxVel;
+
+        // Update position
+        p.position.x += p.velocity.x;
+        p.position.y += p.velocity.y;
+
+        // Keep particles inside canvas bounds
+        if (p.position.x < 0)      p.position.x = 0;
+        if (p.position.x > width)  p.position.x = width;
+        if (p.position.y < 0)      p.position.y = 0;
+        if (p.position.y > height) p.position.y = height;
+
+        // Evaluate cost at new position
+        const cost = warehouseCost(p.position.x, p.position.y);
+
+        // Update personal best
+        if (cost < p.bestCost) {
+          p.bestCost = cost;
+          p.bestPosition = { ...p.position };
+        }
+
+        // Update global best
+        if (cost < globalBest.cost) {
+          globalBest.cost = cost;
+          globalBest.position = { ...p.position };
+        }
+      }
+    }
+
+    function drawScene() {
+      ctx.clearRect(0, 0, width, height);
+
+      // Light grid in background
+      ctx.strokeStyle = "rgba(148,163,184,0.2)";
+      ctx.lineWidth = 0.5;
+      for (let x = 50; x < width; x += 50) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      for (let y = 50; y < height; y += 50) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+
+      // Draw stores (blue circles)
+      for (const s of stores) {
+        ctx.beginPath();
+        ctx.fillStyle = "#38bdf8";
+        ctx.arc(s.x, s.y, 7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Draw residential zones (red squares + safe radius)
+      for (const r of residentialZones) {
+        // Safe radius circle
+        ctx.beginPath();
+        ctx.strokeStyle = "rgba(239,68,68,0.25)";
+        ctx.lineWidth = 1;
+        ctx.arc(r.x, r.y, safeRadius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Center square
+        ctx.fillStyle = "#ef4444";
+        const size = 10;
+        ctx.fillRect(r.x - size / 2, r.y - size / 2, size, size);
+      }
+
+      // Draw particles
+      for (const p of particles) {
+        ctx.beginPath();
+        ctx.fillStyle = "rgba(148,163,184,0.9)";
+        ctx.arc(p.position.x, p.position.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Draw global best warehouse location
+      if (globalBest.cost < Infinity) {
+        ctx.beginPath();
+        ctx.fillStyle = "#22c55e";
+        ctx.arc(globalBest.position.x, globalBest.position.y, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Label
+        ctx.fillStyle = "#e5e7eb";
+        ctx.font = "12px Arial";
+        ctx.fillText("Best Warehouse", globalBest.position.x + 10, globalBest.position.y - 8);
+      }
+
+      // Update text stats
+      if (globalBest.cost < Infinity) {
+        bestCostSpan.textContent = globalBest.cost.toFixed(2);
+        bestXSpan.textContent = globalBest.position.x.toFixed(1);
+        bestYSpan.textContent = globalBest.position.y.toFixed(1);
+      }
+    }
+
+    function loop() {
+      frameCount++;
+
+      // Only update the swarm every N frames to slow down animation
+      if (running && frameCount % UPDATE_EVERY_N_FRAMES === 0) {
+        updateParticles();
+      }
+
+      drawScene();
+      requestAnimationFrame(loop);
+    }
+
+    // Event listeners
+    numParticlesSlider.addEventListener("input", () => {
+      numParticlesVal.textContent = numParticlesSlider.value;
+      initSwarm();
+    });
+
+    wRange.addEventListener("input", () => {
+      wVal.textContent = wRange.value;
+    });
+
+    c1Range.addEventListener("input", () => {
+      c1Val.textContent = c1Range.value;
+    });
+
+    c2Range.addEventListener("input", () => {
+      c2Val.textContent = c2Range.value;
+    });
+
+    resetBtn.addEventListener("click", () => {
+      initSwarm();
+    });
+
+    toggleBtn.addEventListener("click", () => {
+      running = !running;
+      toggleBtn.textContent = running ? "Pause" : "Play";
+    });
+
+    // Initial UI values
+    numParticlesVal.textContent = numParticlesSlider.value;
+    wVal.textContent  = wRange.value;
+    c1Val.textContent = c1Range.value;
+    c2Val.textContent = c2Range.value;
+
+    // Start PSO
+    initSwarm();
+    loop();
+  </script>
+</body>
+</html>

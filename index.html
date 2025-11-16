@@ -294,8 +294,8 @@
       <div class="home-card" data-goto="algos">
         <h3 class="home-card-title">Algorithms Workspace</h3>
         <p class="home-card-sub">
-          0/1 Knapsack, TSP (Brute Force / Branch &amp; Bound / GA), Coin Change, LCS, CNN
-          classification, Arithmetic encoding and more.
+          Knapsack, TSP (Brute Force / Branch &amp; Bound / GA &amp; benchmarks),
+          Coin Change, LCS, Huffman, CNN classification, Arithmetic coding and more.
         </p>
         <div class="home-card-footer">Open algorithms workspace →</div>
       </div>
@@ -329,7 +329,7 @@
       <h3>Design & Analysis of Algorithms</h3>
       <p>Select any experiment to load its HTML page on the right.</p>
       <ul class="alg-list" id="algList">
-        <!-- All algorithm files from algorithms/ folder -->
+        <!-- Knapsack -->
         <li class="alg-item active" data-src="algorithms/knapsack_dp.html">
           <span class="label">0/1 Knapsack — Dynamic Programming</span>
           <span class="badge">algorithms/</span>
@@ -339,21 +339,43 @@
           <span class="badge">algorithms/</span>
         </li>
         <li class="alg-item" data-src="algorithms/kanpsack_ga.html">
-          <span class="label">0/1 Knapsack — Genetic / Heuristic</span>
+          <span class="label">0/1 Knapsack — Genetic Algorithm</span>
           <span class="badge">algorithms/</span>
+        </li>
+
+        <!-- TSP core -->
+        <li class="alg-item" data-src="algorithms/tsp_bruteforce.html">
+          <span class="label">TSP — Brute Force</span>
+          <span class="badge">TSP core</span>
         </li>
         <li class="alg-item" data-src="algorithms/TSP_branch_bound.html">
-          <span class="label">Travelling Salesman — Branch &amp; Bound</span>
-          <span class="badge">algorithms/</span>
-        </li>
-        <li class="alg-item" data-src="algorithms/tsp_bruteforce.html">
-          <span class="label">Travelling Salesman — Brute Force</span>
-          <span class="badge">algorithms/</span>
+          <span class="label">TSP — Branch &amp; Bound</span>
+          <span class="badge">TSP core</span>
         </li>
         <li class="alg-item" data-src="algorithms/TSP_ga.html">
-          <span class="label">Travelling Salesman — Genetic Algorithm</span>
-          <span class="badge">algorithms/</span>
+          <span class="label">TSP — Genetic Algorithm (Interactive)</span>
+          <span class="badge">TSP core</span>
         </li>
+
+        <!-- TSP benchmark variants -->
+        <li class="alg-item" data-src="algorithms/tsp_bruteforce_Bench.html">
+          <span class="label">TSP — Brute Force (Benchmark / file)</span>
+          <span class="badge">TSP bench</span>
+        </li>
+        <li class="alg-item" data-src="algorithms/TSP_branchandbound_bench1.html">
+          <span class="label">TSP — Branch &amp; Bound (Benchmark 1)</span>
+          <span class="badge">TSP bench</span>
+        </li>
+        <li class="alg-item" data-src="algorithms/TSP_BrandandBound_Bench.html">
+          <span class="label">TSP — Branch &amp; Bound (Full Benchmark)</span>
+          <span class="badge">TSP bench</span>
+        </li>
+        <li class="alg-item" data-src="algorithms/TSP_ga_bench.html">
+          <span class="label">TSP — Genetic Algorithm (Benchmark / file)</span>
+          <span class="badge">TSP bench</span>
+        </li>
+
+        <!-- Coin change -->
         <li class="alg-item" data-src="algorithms/coin_changing_dp.html">
           <span class="label">Coin Change — Dynamic Programming</span>
           <span class="badge">algorithms/</span>
@@ -362,11 +384,14 @@
           <span class="label">Coin Change — Cashier / Greedy</span>
           <span class="badge">algorithms/</span>
         </li>
+
+        <!-- LCS -->
         <li class="alg-item" data-src="algorithms/Longest Common Subsequence.html">
           <span class="label">Longest Common Subsequence (LCS)</span>
           <span class="badge">algorithms/</span>
         </li>
-        <!-- NEW: Huffman files -->
+
+        <!-- Huffman & arithmetic -->
         <li class="alg-item" data-src="algorithms/huffman_table.html">
           <span class="label">Huffman Coding — Table Based</span>
           <span class="badge">algorithms/</span>
@@ -375,16 +400,22 @@
           <span class="label">Huffman Coding — Greedy Construction</span>
           <span class="badge">algorithms/</span>
         </li>
-        <!-- Existing: arithmetic & CNN -->
         <li class="alg-item" data-src="algorithms/arithematic_encoding_and_decoding.html">
           <span class="label">Arithmetic Encoding &amp; Decoding</span>
           <span class="badge">algorithms/</span>
         </li>
+
+        <!-- CNN + PSO -->
         <li class="alg-item" data-src="algorithms/cnn-classification.html">
-          <span class="label">CNN Classification (Image)</span>
+          <span class="label">CNN Classification</span>
           <span class="badge">algorithms/</span>
+        </li>
         <li class="alg-item" data-src="algorithms/pso_task_scheduling.html">
-          <span class="label">PSO — Task Scheduling (Particle Swarm Optimization)</span>
+          <span class="label">PSO — Task Scheduling</span>
+          <span class="badge">algorithms/</span>
+        </li>
+        <li class="alg-item" data-src="algorithms/pso_warehouse.html">
+          <span class="label">PSO — Warehouse Location</span>
           <span class="badge">algorithms/</span>
         </li>
       </ul>
@@ -424,7 +455,7 @@
           <span class="badge">DIP/</span>
         </li>
         <li class="dip-item" data-src="DIP/histogram_equa.html">
-          <span class="label">Histogram Equalisation</span>
+          <span class="label">Histogram Equalization</span>
           <span class="badge">DIP/</span>
         </li>
         <li class="dip-item" data-src="DIP/convolution_padding.html">

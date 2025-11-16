@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CNN — Convolution & Pooling (Multi-layer)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+      background: radial-gradient(
+        circle at top,
+        var(--panel-2, #0f172a) 0,
+        var(--bg, #020617) 55%
+      );
+      color: var(--text, #e5e7eb);
+    }
+
+    .cnn-shell {
+      max-width: 1200px;
+      margin: 24px auto;
+      padding: 24px;
+      border-radius: 24px;
+      background:
+        radial-gradient(
+          circle at top left,
+          color-mix(in srgb, var(--accent, #38bdf8) 15%, transparent),
+          transparent 55%
+        ),
+        radial-gradient(
+          circle at top right,
+          color-mix(in srgb, var(--accent2, #a855f7) 15%, transparent),
+          transparent 55%
+        ),
+        color-mix(in srgb, var(--panel, #0f172a) 96%, black 4%);
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.85);
+      border: 1px solid color-mix(in srgb, var(--border, #1f2937) 80%, transparent);
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .title-block h1 {
+      margin: 0 0 4px;
+      font-size: 1.4rem;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid color-mix(in srgb, var(--border, #1f2937) 60%, transparent);
+      color: var(--muted, #9ca3af);
+    }
+
+    .title-block p {
+      margin: 0;
+      font-size: 0.85rem;
+      color: var(--muted, #9ca3af);
+    }
+
+    .tagline {
+      font-size: 0.8rem;
+      color: var(--muted, #9ca3af);
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid color-mix(in srgb, var(--border, #1f2937) 65%, transparent);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tag-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: conic-gradient(
+        from 180deg,
+        var(--accent, #38bdf8),
+        var(--accent2, #a855f7)
+      );
+      box-shadow: 0 0 10px color-mix(in srgb, var(--accent, #38bdf8) 80%, transparent);
+    }
+
+    .grid-main {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.45fr);
+      gap: 18px;
+    }
+
+    .panel {
+      background: radial-gradient(
+        circle at top left,
+        color-mix(in srgb, var(--panel-2, #020617) 80%, transparent),
+        var(--panel, #0f172a)
+      );
+      border-radius: 18px;
+      border: 1px solid color-mix(in srgb, var(--border, #1f2937) 80%, transparent);
+      padding: 16px 16px 18px;
+      box-shadow: 0 14px 30px rgba(15, 23, 42, 0.9);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(
+        circle at top right,
+        color-mix(in srgb, var(--accent, #38bdf8) 12%, transparent),
+        transparent 60%
+      );
+      pointer-events: none;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .panel-header h2 {
+      margin: 0;
+      font-size: 0.95rem;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--text, #e5e7eb);
+    }
+
+    .panel-sub {
+      font-size: 0.7rem;
+      color: var(--muted, #9ca3af);
+      margin: 0;
+    }
+
+    .pill {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid color-mix(in srgb, var(--border, #1f2937) 70%, transparent);
+      color: var(--muted, #9ca3af);
+      background: color-mix(in srgb, var(--panel-2, #020617) 90%, transparent);
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 0.8rem;
+      color: var(--muted, #9ca3af);
+    }
+
+    input[type="file"],
+    select {
+      font-size: 0.82rem;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid color-mix(in srgb, var(--border, #1f2937) 80%, transparent);
+      outline: none;
+      background: radial-gradient(circle at top, var(--bg, #020617), #020617);
+      color: var(--text, #e5e7eb);
+    }
+
+    select:focus,
+    input[type="file"]:focus {
+      border-color: var(--accent, #38bdf8);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent, #38bdf8) 60%, transparent);
+    }
+
+    .btn {
+      border-radius: 999px;
+      padding: 9px 16px;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 0.83rem;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      background:
+        radial-gradient(
+          circle at 20% 0,
+          color-mix(in srgb, var(--accent, #0ea5e9) 35%, transparent),
+          transparent 55%
+        ),
+        radial-gradient(
+          circle at 80% 100%,
+          color-mix(in srgb, var(--accent2, #a855f7) 35%, transparent),
+          transparent 55%
+        ),
+        linear-gradient(
+          135deg,
+          var(--accent, #0ea5e9),
+          var(--accent2, #a855f7)
+        );
+      color: #ffffff;
+      box-shadow: 0 16px 35px rgba(8, 47, 73, 0.7);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.95);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.8);
+    }
+
+    .info-line {
+      font-size: 0.75rem;
+      color: var(--muted, #9ca3af);
+    }
+
+    .info-line strong {
+      color: var(--accent, #38bdf8);
+      font-weight: 500;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-card {
+      border-radius: 14px;
+      border: 1px dashed color-mix(in srgb, var(--border, #1f2937) 75%, transparent);
+      padding: 8px 10px;
+      font-size: 0.75rem;
+      background: radial-gradient(
+        circle at top left,
+        color-mix(in srgb, var(--panel-2, #020617) 95%, transparent),
+        var(--panel, #0f172a)
+      );
+    }
+
+    .step-title {
+      font-size: 0.78rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted, #9ca3af);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .step-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      border: 1px solid color-mix(in srgb, var(--border, #1f2937) 70%, transparent);
+      box-shadow: 0 0 8px color-mix(in srgb, var(--accent, #3b82f6) 80%, transparent);
+    }
+
+    .visual-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .vis-card {
+      border-radius: 14px;
+      border: 1px solid color-mix(in srgb, var(--border, #1f2937) 85%, transparent);
+      padding: 8px;
+      background: radial-gradient(
+        circle at top,
+        color-mix(in srgb, var(--panel-2, #020617) 90%, transparent),
+        var(--panel, #0f172a)
+      );
+      position: relative;
+      overflow: hidden;
+    }
+
+    .vis-card h3 {
+      margin: 0 0 4px;
+      font-size: 0.8rem;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--text, #e5e7eb);
+    }
+
+    .vis-meta {
+      font-size: 0.7rem;
+      color: var(--muted, #9ca3af);
+      margin-bottom: 4px;
+    }
+
+    .canvas-wrap {
+      border-radius: 10px;
+      border: 1px solid color-mix(in srgb, var(--border, #1f2937) 85%, transparent);
+      background: radial-gradient(circle at top, var(--bg, #020617), #020617);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 120px;
+    }
+
+    canvas {
+      image-rendering: pixelated;
+      max-width: 100%;
+    }
+
+    .matrix-preview {
+      margin-top: 5px;
+      font-size: 0.65rem;
+      color: var(--muted, #9ca3af);
+      max-height: 64px;
+      overflow: auto;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+        Consolas, "Liberation Mono", "Courier New", monospace;
+      border-top: 1px dashed color-mix(in srgb, var(--border, #1f2937) 75%, transparent);
+      padding-top: 4px;
+    }
+
+    .alert {
+      margin-top: 8px;
+      font-size: 0.75rem;
+      color: var(--danger, #f97373);
+    }
+
+    .status {
+      font-size: 0.72rem;
+      color: var(--muted, #9ca3af);
+      margin-top: 4px;
+    }
+
+    /* Theory card for binary vs multi-class */
+    .theory-card {
+      margin-top: 16px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px dashed color-mix(in srgb, var(--border, #1f2937) 75%, transparent);
+      background: color-mix(in srgb, var(--panel-2, #020617) 92%, transparent);
+      font-size: 0.75rem;
+      color: var(--muted, #9ca3af);
+    }
+
+    .theory-card-title {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--accent, #38bdf8);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .theory-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--accent2, #a855f7) 80%, transparent);
+      box-shadow: 0 0 8px color-mix(in srgb, var(--accent2, #a855f7) 80%, transparent);
+    }
+
+    .theory-card ul {
+      margin: 4px 0 0 16px;
+      padding: 0;
+    }
+
+    .theory-card li {
+      margin-bottom: 2px;
+    }
+
+    @media (max-width: 900px) {
+      .grid-main {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .visual-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="cnn-shell">
+  <div class="header">
+    <div class="title-block">
+      <h1>
+        CNN Visual Block — Convolution &amp; Pooling (Multi-layer)
+        <span class="badge">Algorithms Dashboard · CNN Module</span>
+      </h1>
+      <p>
+        This block shows the <strong>feature extraction</strong> part of a CNN:
+        stacked Conv2D + Pooling layers applied on your image.
+      </p>
+    </div>
+    <div>
+      <div class="tagline">
+        <span class="tag-dot"></span>
+        Upload image → Conv + Pool (1–4 times) → final feature maps
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-main">
+    <!-- LEFT: Controls + Theory -->
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>Input & Hyperparameters</h2>
+          <p class="panel-sub">Upload image, pick kernel, choose pooling & number of Conv blocks.</p>
+        </div>
+        <span class="pill">Setup</span>
+      </div>
+
+      <div class="controls">
+        <div class="field-group">
+          <label for="imageInput">Image input (any photo / icon)</label>
+          <input type="file" id="imageInput" accept="image/*" />
+          <p class="info-line">
+            Internally resized to max <strong>64×64</strong> for fast calculations and clear visualization.
+          </p>
+        </div>
+
+        <div class="field-group">
+          <label for="kernelSelect">Convolution kernel (3×3)</label>
+          <select id="kernelSelect">
+            <option value="identity">Identity (no change)</option>
+            <option value="edge">Edge Detection</option>
+            <option value="sharpen">Sharpen</option>
+            <option value="blur">Blur</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label for="poolingType">Pooling type</label>
+          <select id="poolingType">
+            <option value="max">Max Pooling</option>
+            <option value="avg">Average Pooling</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label for="poolingSize">Pool size (stride = size)</label>
+          <select id="poolingSize">
+            <option value="2">2 × 2</option>
+            <option value="4">4 × 4</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label for="numLayers">Number of Conv + Pool blocks</label>
+          <select id="numLayers">
+            <option value="1">1 layer</option>
+            <option value="2">2 layers</option>
+            <option value="3">3 layers</option>
+            <option value="4">4 layers</option>
+          </select>
+          <p class="info-line">
+            Each block: <strong>Convolution → Pooling</strong> applied on the previous block’s output.
+          </p>
+        </div>
+
+        <div class="field-group">
+          <button id="runBtn" class="btn">
+            ▶ Run CNN Steps
+          </button>
+          <div class="status" id="statusText">Status: Waiting for image…</div>
+          <div class="status" id="layerSummary"></div>
+        </div>
+
+        <div class="steps">
+          <div class="step-card">
+            <div class="step-title">
+              <span class="step-dot"></span>
+              1. Preprocessing
+            </div>
+            <div>Image → resize → grayscale pixel matrix (0–255).</div>
+          </div>
+          <div class="step-card">
+            <div class="step-title">
+              <span class="step-dot"></span>
+              2. Conv Blocks
+            </div>
+            <div>Apply the selected 3×3 kernel on the feature maps.</div>
+          </div>
+          <div class="step-card">
+            <div class="step-title">
+              <span class="step-dot"></span>
+              3. Pool Blocks
+            </div>
+            <div>Downsample feature maps (max / average pooling).</div>
+          </div>
+          <div class="step-card">
+            <div class="step-title">
+              <span class="step-dot"></span>
+              4. Output
+            </div>
+            <div>We show the <strong>final</strong> Conv + Pool feature maps and layer shapes.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Theory box: binary vs multi-class -->
+      <div class="theory-card">
+        <div class="theory-card-title">
+          <span class="theory-dot"></span>
+          Theory: Binary vs Multi-Class Classification
+        </div>
+        <ul>
+          <li><strong>This block = feature extractor.</strong> It doesn’t decide the class yet; it creates feature maps.</li>
+          <li><strong>Binary classification:</strong> last dense layer has <code>1 neuron</code> with <code>sigmoid</code> activation.</li>
+          <li>Output = probability of “class 1” (e.g., cat vs not-cat). Threshold (like 0.5) decides 0/1.</li>
+          <li><strong>Multi-class classification:</strong> last dense layer has <code>K neurons</code> (K = number of classes) with <code>softmax</code> activation.</li>
+          <li>Output = probability distribution over all classes (sum of outputs = 1).</li>
+          <li>You can explain in your CNN theory tab: “Conv+Pooling → flatten → Dense → (Sigmoid / Softmax)”.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- RIGHT: Visualizations -->
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>Conv &amp; Pool Feature Maps</h2>
+          <p class="panel-sub">Each canvas corresponds to a stage of the CNN pipeline.</p>
+        </div>
+        <span class="pill">Visual Output</span>
+      </div>
+
+      <div class="visual-grid">
+        <!-- Original -->
+        <div class="vis-card">
+          <h3>Original (resized)</h3>
+          <div class="vis-meta" id="origMeta">No image loaded</div>
+          <div class="canvas-wrap">
+            <canvas id="origCanvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Grayscale -->
+        <div class="vis-card">
+          <h3>Grayscale</h3>
+          <div class="vis-meta" id="grayMeta">Size: —</div>
+          <div class="canvas-wrap">
+            <canvas id="grayCanvas"></canvas>
+          </div>
+          <div class="matrix-preview" id="grayMatrixPreview"></div>
+        </div>
+
+        <!-- Convolution -->
+        <div class="vis-card">
+          <h3>Final Feature Map — After Convolution</h3>
+          <div class="vis-meta" id="convMeta">Kernel: — | Size: —</div>
+          <div class="canvas-wrap">
+            <canvas id="convCanvas"></canvas>
+          </div>
+          <div class="matrix-preview" id="convMatrixPreview"></div>
+        </div>
+
+        <!-- Pooling -->
+        <div class="vis-card">
+          <h3>Final Feature Map — After Pooling</h3>
+          <div class="vis-meta" id="poolMeta">Type: — | Size: —</div>
+          <div class="canvas-wrap">
+            <canvas id="poolCanvas"></canvas>
+          </div>
+          <div class="matrix-preview" id="poolMatrixPreview"></div>
+        </div>
+      </div>
+
+      <div class="alert" id="alertBox" style="display: none;"></div>
+    </div>
+  </div>
+
+  <!-- Hidden working canvas (for grayscale + internal ops) -->
+  <canvas id="workCanvas" style="display:none;"></canvas>
+</div>
+
+<script>
+  // === DOM elements ===
+  const imageInput = document.getElementById("imageInput");
+  const kernelSelect = document.getElementById("kernelSelect");
+  const poolingTypeSelect = document.getElementById("poolingType");
+  const poolingSizeSelect = document.getElementById("poolingSize");
+  const numLayersSelect = document.getElementById("numLayers");
+  const runBtn = document.getElementById("runBtn");
+  const statusText = document.getElementById("statusText");
+  const layerSummary = document.getElementById("layerSummary");
+  const alertBox = document.getElementById("alertBox");
+
+  const origCanvas = document.getElementById("origCanvas");
+  const grayCanvas = document.getElementById("grayCanvas");
+  const convCanvas = document.getElementById("convCanvas");
+  const poolCanvas = document.getElementById("poolCanvas");
+  const workCanvas = document.getElementById("workCanvas");
+
+  const origMeta = document.getElementById("origMeta");
+  const grayMeta = document.getElementById("grayMeta");
+  const convMeta = document.getElementById("convMeta");
+  const poolMeta = document.getElementById("poolMeta");
+
+  const grayMatrixPreview = document.getElementById("grayMatrixPreview");
+  const convMatrixPreview = document.getElementById("convMatrixPreview");
+  const poolMatrixPreview = document.getElementById("poolMatrixPreview");
+
+  const MAX_SIZE = 64; // internal size for computations
+
+  let imageLoaded = false;
+  let grayMatrix = null;
+
+  // Kernels definition
+  const kernels = {
+    identity: {
+      name: "Identity",
+      matrix: [
+        [0, 0, 0],
+        [0, 1, 0],
+        [0, 0, 0],
+      ],
+    },
+    edge: {
+      name: "Edge Detection",
+      matrix: [
+        [-1, -1, -1],
+        [-1,  8, -1],
+        [-1, -1, -1],
+      ],
+    },
+    sharpen: {
+      name: "Sharpen",
+      matrix: [
+        [ 0, -1,  0],
+        [-1,  5, -1],
+        [ 0, -1,  0],
+      ],
+    },
+    blur: {
+      name: "Blur",
+      matrix: [
+        [1, 1, 1],
+        [1, 1, 1],
+        [1, 1, 1],
+      ],
+    },
+  };
+
+  function showAlert(msg) {
+    alertBox.style.display = "block";
+    alertBox.textContent = msg;
+  }
+
+  function clearAlert() {
+    alertBox.style.display = "none";
+    alertBox.textContent = "";
+  }
+
+  function updateStatus(msg) {
+    statusText.textContent = "Status: " + msg;
+  }
+
+  function clamp(x, min, max) {
+    return Math.max(min, Math.min(max, x));
+  }
+
+  function getGrayscaleMatrixFromContext(ctx, w, h) {
+    const imgData = ctx.getImageData(0, 0, w, h).data;
+    const matrix = [];
+    for (let y = 0; y < h; y++) {
+      const row = [];
+      for (let x = 0; x < w; x++) {
+        const idx = (y * w + x) * 4;
+        const r = imgData[idx];
+        const g = imgData[idx + 1];
+        const b = imgData[idx + 2];
+        // standard luma approximation
+        const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+        row.push(gray);
+      }
+      matrix.push(row);
+    }
+    return matrix;
+  }
+
+  function matrixToCanvas(matrix, canvas) {
+    const h = matrix.length;
+    const w = matrix[0].length;
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    const imgData = ctx.createImageData(w, h);
+
+    // normalize matrix to 0–255 for visibility
+    let min = Infinity;
+    let max = -Infinity;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const v = matrix[y][x];
+        if (v < min) min = v;
+        if (v > max) max = v;
+      }
+    }
+    const range = max - min || 1;
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const idx = (y * w + x) * 4;
+        const norm = (matrix[y][x] - min) / range;
+        const val = clamp(Math.round(norm * 255), 0, 255);
+        imgData.data[idx] = val;
+        imgData.data[idx + 1] = val;
+        imgData.data[idx + 2] = val;
+        imgData.data[idx + 3] = 255;
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+  }
+
+  function previewMatrix(matrix, widthLimit = 10, heightLimit = 10) {
+    if (!matrix) return "";
+    const h = matrix.length;
+    const w = matrix[0].length;
+    const rowsToShow = Math.min(h, heightLimit);
+    const colsToShow = Math.min(w, widthLimit);
+    let lines = [];
+    for (let y = 0; y < rowsToShow; y++) {
+      const row = [];
+      for (let x = 0; x < colsToShow; x++) {
+        row.push(String(matrix[y][x]).padStart(3, " "));
+      }
+      if (w > colsToShow) row.push(" …");
+      lines.push(row.join(" "));
+    }
+    if (h > rowsToShow) {
+      lines.push("…");
+    }
+    return lines.join("\n");
+  }
+
+  function convolve2D(matrix, kernel) {
+    const kh = kernel.length;
+    const kw = kernel[0].length;
+    const h = matrix.length;
+    const w = matrix[0].length;
+    const outH = h - kh + 1;
+    const outW = w - kw + 1;
+    if (outH <= 0 || outW <= 0) return null;
+
+    // divisor for normalization (e.g., blur)
+    let divisor = kernel.flat().reduce((a, b) => a + b, 0);
+    if (divisor === 0) divisor = 1;
+
+    const out = [];
+    for (let y = 0; y < outH; y++) {
+      const row = [];
+      for (let x = 0; x < outW; x++) {
+        let sum = 0;
+        for (let ky = 0; ky < kh; ky++) {
+          for (let kx = 0; kx < kw; kx++) {
+            sum += matrix[y + ky][x + kx] * kernel[ky][kx];
+          }
+        }
+        const val = sum / divisor;
+        row.push(val);
+      }
+      out.push(row);
+    }
+    return out;
+  }
+
+  function pool2D(matrix, size, type) {
+    const h = matrix.length;
+    const w = matrix[0].length;
+    const outH = Math.floor(h / size);
+    const outW = Math.floor(w / size);
+    if (outH <= 0 || outW <= 0) return null;
+    const out = [];
+
+    for (let y = 0; y < outH; y++) {
+      const row = [];
+      for (let x = 0; x < outW; x++) {
+        let values = [];
+        for (let yy = 0; yy < size; yy++) {
+          for (let xx = 0; xx < size; xx++) {
+            values.push(matrix[y * size + yy][x * size + xx]);
+          }
+        }
+        let pooled;
+        if (type === "max") {
+          pooled = Math.max(...values);
+        } else {
+          const sum = values.reduce((a, b) => a + b, 0);
+          pooled = sum / values.length;
+        }
+        row.push(pooled);
+      }
+      out.push(row);
+    }
+    return out;
+  }
+
+  // === Image loading ===
+  imageInput.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const img = new Image();
+    img.onload = () => {
+      const srcW = img.width;
+      const srcH = img.height;
+      const scale = Math.min(1, MAX_SIZE / Math.max(srcW, srcH));
+      const w = Math.max(1, Math.round(srcW * scale));
+      const h = Math.max(1, Math.round(srcH * scale));
+
+      workCanvas.width = w;
+      workCanvas.height = h;
+      const wctx = workCanvas.getContext("2d");
+      wctx.clearRect(0, 0, w, h);
+      wctx.drawImage(img, 0, 0, w, h);
+
+      // copy to original preview canvas
+      origCanvas.width = w;
+      origCanvas.height = h;
+      const octx = origCanvas.getContext("2d");
+      octx.clearRect(0, 0, w, h);
+      octx.drawImage(img, 0, 0, w, h);
+
+      origMeta.textContent = `Resized to ${w} × ${h} for processing.`;
+
+      // grayscale matrix
+      grayMatrix = getGrayscaleMatrixFromContext(wctx, w, h);
+      matrixToCanvas(grayMatrix, grayCanvas);
+      grayMeta.textContent = `Grayscale matrix: ${w} × ${h}`;
+      grayMatrixPreview.textContent = previewMatrix(grayMatrix);
+
+      imageLoaded = true;
+      clearAlert();
+      layerSummary.textContent = "";
+      updateStatus("Image loaded. Choose kernel, pooling & layers, then run.");
+    };
+    img.onerror = () => {
+      showAlert("Could not load image. Please try a different file.");
+      imageLoaded = false;
+      updateStatus("Error loading image.");
+    };
+    img.src = URL.createObjectURL(file);
+    updateStatus("Loading image…");
+  });
+
+  // === Run CNN steps (multi-layer) ===
+  runBtn.addEventListener("click", () => {
+    clearAlert();
+    layerSummary.textContent = "";
+    if (!imageLoaded || !grayMatrix) {
+      showAlert("Please upload an image first.");
+      updateStatus("No image. Upload first.");
+      return;
+    }
+
+    const kernelKey = kernelSelect.value;
+    const kernelInfo = kernels[kernelKey];
+    const poolType = poolingTypeSelect.value;
+    const poolSize = parseInt(poolingSizeSelect.value, 10);
+    const numLayers = parseInt(numLayersSelect.value, 10);
+
+    updateStatus("Running convolution & pooling across layers…");
+
+    let currentMatrix = grayMatrix;
+    let convMatrix = null;
+    let pooledMatrix = null;
+    const layerInfoLines = [];
+
+    for (let layer = 1; layer <= numLayers; layer++) {
+      convMatrix = convolve2D(currentMatrix, kernelInfo.matrix);
+      if (!convMatrix) {
+        showAlert(
+          `Matrix too small for 3×3 convolution at layer ${layer}. Try fewer layers or smaller pool size.`
+        );
+        updateStatus("Convolution failed.");
+        return;
+      }
+
+      pooledMatrix = pool2D(convMatrix, poolSize, poolType);
+      if (!pooledMatrix) {
+        showAlert(
+          `Feature map too small for pool size ${poolSize} at layer ${layer}. Try fewer layers or smaller pool size.`
+        );
+        updateStatus("Pooling failed.");
+        return;
+      }
+
+      const convW = convMatrix[0].length;
+      const convH = convMatrix.length;
+      const poolW = pooledMatrix[0].length;
+      const poolH = pooledMatrix.length;
+      layerInfoLines.push(`Layer ${layer}: conv ${convW}×${convH} → pool ${poolW}×${poolH}`);
+
+      currentMatrix = pooledMatrix;
+    }
+
+    // visualize final conv & pooled outputs
+    matrixToCanvas(convMatrix, convCanvas);
+    convMeta.textContent =
+      `Kernel: ${kernelInfo.name} | Final conv size: ` +
+      `${convMatrix[0].length} × ${convMatrix.length} | Layers: ${numLayers}`;
+    convMatrixPreview.textContent = previewMatrix(convMatrix);
+
+    matrixToCanvas(pooledMatrix, poolCanvas);
+    poolMeta.textContent =
+      `Type: ${poolType.toUpperCase()} | Final pool size: ` +
+      `${pooledMatrix[0].length} × ${pooledMatrix.length}`;
+    poolMatrixPreview.textContent = previewMatrix(pooledMatrix);
+
+    layerSummary.textContent = "Layer shapes: " + layerInfoLines.join("  •  ");
+    updateStatus("Done. Final feature maps updated.");
+  });
+</script>
+</body>
+</html>

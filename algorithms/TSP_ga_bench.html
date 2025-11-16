@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Genetic Algorithm — TSP from .txt</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #020617;
+      --card: #020b1f;
+      --border: #1e293b;
+      --accent: #38bdf8;
+      --accent2: #a855f7;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui,-apple-system,"Segoe UI",sans-serif;
+      background: radial-gradient(circle at top,#020617 0,#000 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(90deg,#020617,#020818);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 600;
+      letter-spacing: .03em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .logo {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%,#38bdf8,#0f172a 70%);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .8rem;
+      color: white;
+      box-shadow: 0 0 0 1px rgba(148,163,184,0.4);
+    }
+    .subtitle {
+      margin: 2px 0 0;
+      font-size: .8rem;
+      color: var(--muted);
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.7);
+      font-size: .75rem;
+      color: var(--muted);
+      background: rgba(15,23,42,0.9);
+    }
+    .pill-dot {
+      width: 7px;height: 7px;border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 3px rgba(56,189,248,0.35);
+    }
+    main {
+      flex: 1;
+      padding: 18px 20px 22px;
+      display: flex;
+      justify-content: center;
+    }
+    .card {
+      max-width: 860px;
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid rgba(30,41,59,0.9);
+      background: radial-gradient(circle at top left,#020b1f,#020617 55%);
+      box-shadow: 0 18px 40px rgba(15,23,42,0.85);
+      padding: 14px 16px 16px;
+      font-size: .85rem;
+    }
+    .card p {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: .8rem;
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    input[type="file"] {
+      font-size: .8rem;
+      color: var(--muted);
+    }
+    input[type="number"] {
+      background: rgba(15,23,42,0.95);
+      color: var(--text);
+      border-radius: 999px;
+      border: 1px solid rgba(51,65,85,0.9);
+      padding: 5px 9px;
+      font-size: .78rem;
+      min-width: 80px;
+      outline: none;
+    }
+    input[type="number"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(56,189,248,0.4);
+      background: #020617;
+    }
+    label.small {
+      font-size: .75rem;
+      color: var(--muted);
+    }
+    button {
+      border-radius: 999px;
+      border: 1px solid rgba(56,189,248,0.7);
+      background: radial-gradient(circle at 20% 0,#38bdf8,#0f172a 70%);
+      color: #020617;
+      padding: 6px 13px;
+      font-size: .8rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 6px 20px rgba(15,23,42,0.85);
+      transition: transform .1s, box-shadow .1s;
+      white-space: nowrap;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 30px rgba(15,23,42,0.9);
+    }
+    button:disabled {
+      opacity: .5;
+      cursor: default;
+      transform: none;
+      box-shadow: none;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4,minmax(0,1fr));
+      gap: 8px;
+      margin: 10px 0;
+      font-size: .8rem;
+    }
+    @media (max-width: 720px) {
+      .stats { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    }
+    .stat {
+      padding: 6px 8px;
+      border-radius: 12px;
+      border: 1px solid rgba(148,163,184,0.4);
+      background: rgba(15,23,42,0.95);
+    }
+    .stat-label {
+      font-size: .72rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .stat-value {
+      margin-top: 2px;
+      font-size: .9rem;
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+    pre {
+      margin: 0;
+      margin-top: 6px;
+      border-radius: 12px;
+      border: 1px solid rgba(30,64,175,0.7);
+      background: rgba(15,23,42,0.98);
+      padding: 8px 10px;
+      font-size: .8rem;
+      white-space: pre-wrap;
+      max-height: 260px;
+      overflow: auto;
+    }
+    footer {
+      font-size: .7rem;
+      color: var(--muted);
+      padding: 6px 18px 10px;
+      text-align: right;
+      border-top: 1px solid rgba(15,23,42,0.9);
+      background: rgba(2,6,23,0.98);
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>
+      <span class="logo">GA</span>
+      Genetic Algorithm — TSP (.txt)
+    </h1>
+    <div class="subtitle">
+      Load an edge list, then GA searches for a short tour (approximate, not brute force).
+    </div>
+  </div>
+  <div class="pill">
+    <span class="pill-dot"></span>
+    <span>Heuristic · works for 47 cities</span>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <p>
+      <strong>File format (edge list):</strong><br>
+      <code># comments allowed</code><br>
+      <code>1 2 10.5</code><br>
+      <code>1 3 7.2</code><br>
+      <code>2 3 3.0</code><br>
+      Cities are 1..n. Missing edges are treated as ∞. Graph is assumed symmetric.
+    </p>
+
+    <div class="row">
+      <input type="file" id="fileInput" accept=".txt">
+      <label class="small">
+        Pop
+        <input type="number" id="popInput" min="10" max="1000" value="200">
+      </label>
+      <label class="small">
+        Gens
+        <input type="number" id="genInput" min="10" max="5000" value="1000">
+      </label>
+      <label class="small">
+        Px
+        <input type="number" id="crossInput" min="0" max="1" step="0.05" value="0.9">
+      </label>
+      <label class="small">
+        Pm
+        <input type="number" id="mutInput" min="0" max="1" step="0.01" value="0.02">
+      </label>
+      <button id="runBtn">Run GA TSP</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">Cities</div>
+        <div class="stat-value" id="nStat">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Best cost</div>
+        <div class="stat-value" id="costStat">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Generations</div>
+        <div class="stat-value" id="genStat">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Runtime</div>
+        <div class="stat-value" id="timeStat">—</div>
+      </div>
+    </div>
+
+    <pre id="output">Waiting for file…</pre>
+  </div>
+</main>
+
+<footer>
+  GA encodes tours as permutations of {0,…,n−1} and uses order crossover + swap mutation. Fitness = 1/(distance).
+</footer>
+
+<script>
+  const fileInput = document.getElementById("fileInput");
+  const runBtn   = document.getElementById("runBtn");
+  const popInput = document.getElementById("popInput");
+  const genInput = document.getElementById("genInput");
+  const crossInput = document.getElementById("crossInput");
+  const mutInput   = document.getElementById("mutInput");
+
+  const nStat   = document.getElementById("nStat");
+  const costStat= document.getElementById("costStat");
+  const genStat = document.getElementById("genStat");
+  const timeStat= document.getElementById("timeStat");
+  const output  = document.getElementById("output");
+
+  function parseEdgeList(text) {
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+    const edges = [];
+    let maxCity = 0;
+    for (const line of lines) {
+      if (line.startsWith("#")) continue;
+      const parts = line.split(/\s+/);
+      if (parts.length < 3) continue;
+      const i = parseInt(parts[0], 10);
+      const j = parseInt(parts[1], 10);
+      const d = parseFloat(parts[2]);
+      if (Number.isNaN(i) || Number.isNaN(j) || Number.isNaN(d)) continue;
+      edges.push({ i, j, d });
+      maxCity = Math.max(maxCity, i, j);
+    }
+    if (!edges.length || maxCity === 0) return null;
+    const n = maxCity;
+    const INF = Infinity;
+    const dist = Array.from({ length: n }, () => Array(n).fill(INF));
+    for (const e of edges) {
+      const a = e.i - 1, b = e.j - 1;
+      dist[a][b] = e.d;
+      dist[b][a] = e.d; // symmetric
+    }
+    for (let i = 0; i < n; i++) dist[i][i] = INF;
+    return { n, dist };
+  }
+
+  // --- GA helpers ---
+  function randomPermutation(n) {
+    const arr = [...Array(n).keys()];
+    for (let i = n - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function initPopulation(popSize, n) {
+    const pop = [];
+    for (let i = 0; i < popSize; i++) pop.push(randomPermutation(n));
+    return pop;
+  }
+
+  function tourDistance(dist, chrom) {
+    let d = 0;
+    const n = chrom.length;
+    for (let i = 0; i < n; i++) {
+      const a = chrom[i];
+      const b = chrom[(i + 1) % n];
+      const c = dist[a][b];
+      if (!isFinite(c)) return Infinity;
+      d += c;
+    }
+    return d;
+  }
+
+  function calcFitness(dist, pop) {
+    const distances = [];
+    const fitness = [];
+    let bestDist = Infinity;
+    let bestChrom = null;
+
+    for (let i = 0; i < pop.length; i++) {
+      const chrom = pop[i];
+      const d = tourDistance(dist, chrom);
+      distances.push(d);
+      const fit = isFinite(d) && d > 0 ? 1 / d : 1e-12;
+      fitness.push(fit);
+      if (d < bestDist) {
+        bestDist = d;
+        bestChrom = chrom;
+      }
+    }
+    return { distances, fitness, bestDist, bestChrom };
+  }
+
+  function rouletteSelect(pop, fitness) {
+    const total = fitness.reduce((a, b) => a + b, 0);
+    if (!isFinite(total) || total <= 0) {
+      return pop[Math.floor(Math.random() * pop.length)];
+    }
+    const r = Math.random() * total;
+    let acc = 0;
+    for (let i = 0; i < pop.length; i++) {
+      acc += fitness[i];
+      if (r <= acc) return pop[i];
+    }
+    return pop[pop.length - 1];
+  }
+
+  // Order Crossover (OX)
+  function orderCrossover(p1, p2) {
+    const size = p1.length;
+    const child = new Array(size).fill(null);
+    const start = Math.floor(Math.random() * size);
+    const end = start + Math.floor(Math.random() * (size - start));
+    for (let i = start; i <= end; i++) child[i] = p1[i];
+    let idx2 = 0;
+    for (let i = 0; i < size; i++) {
+      if (child[i] == null) {
+        while (child.includes(p2[idx2])) idx2++;
+        child[i] = p2[idx2++];
+      }
+    }
+    return child;
+  }
+
+  function mutateSwap(chrom, rate) {
+    for (let i = 0; i < chrom.length; i++) {
+      if (Math.random() < rate) {
+        const j = Math.floor(Math.random() * chrom.length);
+        [chrom[i], chrom[j]] = [chrom[j], chrom[i]];
+      }
+    }
+  }
+
+  function runGA(dist, popSize, generations, crossRate, mutRate) {
+    const n = dist.length;
+    let population = initPopulation(popSize, n);
+    let globalBestDist = Infinity;
+    let globalBestChrom = null;
+
+    for (let gen = 0; gen < generations; gen++) {
+      const { distances, fitness, bestDist, bestChrom } = calcFitness(dist, population);
+
+      if (bestChrom && bestDist < globalBestDist) {
+        globalBestDist = bestDist;
+        globalBestChrom = bestChrom.slice();
+      }
+
+      const newPop = [];
+      // Elitism: keep best one
+      if (globalBestChrom) newPop.push(globalBestChrom.slice());
+
+      while (newPop.length < popSize) {
+        const p1 = rouletteSelect(population, fitness);
+        const p2 = rouletteSelect(population, fitness);
+        let child = Math.random() < crossRate ? orderCrossover(p1, p2) : p1.slice();
+        mutateSwap(child, mutRate);
+        newPop.push(child);
+      }
+      population = newPop;
+    }
+
+    return { bestCost: globalBestDist, bestChrom: globalBestChrom };
+  }
+
+  runBtn.addEventListener("click", () => {
+    const file = fileInput.files[0];
+    if (!file) {
+      alert("Please select a .txt file.");
+      return;
+    }
+
+    const popSize = parseInt(popInput.value, 10) || 200;
+    const generations = parseInt(genInput.value, 10) || 1000;
+    const crossRate = parseFloat(crossInput.value) || 0.9;
+    const mutRate   = parseFloat(mutInput.value) || 0.02;
+
+    runBtn.disabled = true;
+    runBtn.textContent = "Running…";
+    output.textContent = "Reading file and building distance matrix…";
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const parsed = parseEdgeList(reader.result);
+      if (!parsed) {
+        alert("Could not parse file. Check that lines are: i j cost");
+        output.textContent = "Parsing failed.";
+        runBtn.disabled = false;
+        runBtn.textContent = "Run GA TSP";
+        return;
+      }
+
+      const { n, dist } = parsed;
+      nStat.textContent = n;
+      output.textContent =
+        `Parsed graph with ${n} cities.\n` +
+        `Running GA: pop=${popSize}, generations=${generations}, Px=${crossRate}, Pm=${mutRate}...\n`;
+
+      const t0 = performance.now();
+      const res = runGA(dist, popSize, generations, crossRate, mutRate);
+      const t1 = performance.now();
+      const runtimeMs = t1 - t0;
+
+      genStat.textContent = generations;
+      timeStat.textContent = runtimeMs.toFixed(2) + " ms";
+
+      if (res.bestChrom && isFinite(res.bestCost)) {
+        costStat.textContent = res.bestCost.toFixed(3);
+        const route1 = res.bestChrom.map(i => i + 1); // 1-based
+        const fullRoute = [...route1, route1[0]];     // return to start
+        output.textContent =
+          `GA finished.\n` +
+          `Cities: ${n}\n` +
+          `Population: ${popSize}\n` +
+          `Generations: ${generations}\n` +
+          `Best tour (1-based, incl. return): [${fullRoute.join(" → ")}]\n` +
+          `Best cost: ${res.bestCost}\n` +
+          `Runtime: ${runtimeMs.toFixed(2)} ms`;
+      } else {
+        costStat.textContent = "–";
+        output.textContent += "\nNo feasible tour found (all used ∞ edges?).";
+      }
+
+      runBtn.disabled = false;
+      runBtn.textContent = "Run GA TSP";
+    };
+    reader.readAsText(file);
+  });
+</script>
+</body>
+</html>

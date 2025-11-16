@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>TSP Branch & Bound — Edge List Benchmark</title>
+  <style>
+    :root {
+      --bg: #020617;
+      --card: #020617;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.15);
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --border: #1e293b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #1f2937, #020617 60%);
+      color: var(--text);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    h1 span.logo-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 12px var(--accent);
+    }
+    .sub {
+      margin-bottom: 16px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .card {
+      max-width: 900px;
+      margin: 0 auto;
+      background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(15,23,42,0.99));
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 18px 40px rgba(0,0,0,0.4);
+      padding: 14px 16px 18px;
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    input[type="file"] {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    button {
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--accent);
+      background: radial-gradient(circle at top, var(--accent), #0369a1);
+      color: #0b1120;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 0 12px rgba(56,189,248,0.5);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 18px rgba(56,189,248,0.8);
+      background: radial-gradient(circle at top, #38bdf8, #0284c7);
+    }
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 8px;
+      margin: 10px 0 12px;
+    }
+    .stat {
+      background: rgba(15,23,42,0.9);
+      border-radius: 12px;
+      border: 1px solid rgba(148,163,184,0.25);
+      padding: 6px 8px;
+      font-size: 11px;
+    }
+    .stat-label {
+      color: var(--muted);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .stat-value {
+      margin-top: 2px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    #resultRoute {
+      font-size: 12px;
+      margin-bottom: 8px;
+      word-wrap: break-word;
+    }
+    #log {
+      background: rgba(15,23,42,0.9);
+      border-radius: 10px;
+      border: 1px solid rgba(30,64,175,0.6);
+      padding: 8px 10px;
+      font-size: 11px;
+      max-height: 260px;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+    .hint {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>
+    <span class="logo-dot"></span>
+    TSP Branch &amp; Bound — Edge List Benchmark
+  </h1>
+  <div class="sub">
+    Load an edge-list file (<code>city_i city_j distance</code>, comments starting with <code>#</code>).
+    The page runs Branch &amp; Bound with matrix row/column reduction and reports the best tour,
+    runtime, and node count (with safe limits so the browser doesn’t freeze).
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <input type="file" id="fileInput" accept=".txt" />
+      <button id="runBtn">Run Branch &amp; Bound</button>
+    </div>
+    <div class="hint">
+      The dataset you showed has 48 cities and 1128 edges — that’s heavy, so
+      a node/time limit is used. You can adjust it in the code if needed.
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat">
+        <div class="stat-label">Cities (n)</div>
+        <div class="stat-value" id="nStat">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Best Tour Cost</div>
+        <div class="stat-value" id="costStat">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Nodes Explored</div>
+        <div class="stat-value" id="nodesStat">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Runtime</div>
+        <div class="stat-value" id="runtimeStat">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Status</div>
+        <div class="stat-value" id="statusStat">—</div>
+      </div>
+    </div>
+
+    <div id="resultRoute"></div>
+    <div id="log">Waiting for input…</div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById("fileInput");
+    const runBtn = document.getElementById("runBtn");
+
+    const nStat = document.getElementById("nStat");
+    const costStat = document.getElementById("costStat");
+    const nodesStat = document.getElementById("nodesStat");
+    const runtimeStat = document.getElementById("runtimeStat");
+    const statusStat = document.getElementById("statusStat");
+    const resultRoute = document.getElementById("resultRoute");
+    const logBox = document.getElementById("log");
+
+    // ---- helpers ----
+    function appendLog(msg) {
+      logBox.textContent += "\n" + msg;
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    function parseEdgeList(text) {
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+      const edges = [];
+      let maxCity = 0;
+
+      for (const line of lines) {
+        if (line.startsWith("#")) continue;
+        const parts = line.split(/\s+/);
+        if (parts.length < 3) continue;
+        const i = parseInt(parts[0], 10);
+        const j = parseInt(parts[1], 10);
+        const d = parseFloat(parts[2]);
+        if (Number.isNaN(i) || Number.isNaN(j) || Number.isNaN(d)) continue;
+        edges.push({ i, j, d });
+        if (i > maxCity) maxCity = i;
+        if (j > maxCity) maxCity = j;
+      }
+
+      if (!edges.length || maxCity === 0) return null;
+
+      const n = maxCity;
+      const INF = Infinity;
+      const dist = Array.from({ length: n }, () => Array(n).fill(INF));
+      for (const e of edges) {
+        const a = e.i - 1;
+        const b = e.j - 1;
+        dist[a][b] = e.d;
+        dist[b][a] = e.d;
+      }
+      for (let i = 0; i < n; i++) dist[i][i] = INF;
+
+      return { n, dist };
+    }
+
+    function deepCopyMatrix(mat) {
+      return mat.map(row => row.slice());
+    }
+
+    function reduceMatrix(matrix) {
+      const n = matrix.length;
+      const reduced = deepCopyMatrix(matrix);
+      const rowReductions = new Array(n).fill(0);
+      const colReductions = new Array(n).fill(0);
+      let cost = 0;
+
+      // Row reductions
+      for (let i = 0; i < n; i++) {
+        let minVal = Infinity;
+        for (let j = 0; j < n; j++) {
+          if (reduced[i][j] < minVal) minVal = reduced[i][j];
+        }
+        if (isFinite(minVal) && minVal > 0) {
+          for (let j = 0; j < n; j++) {
+            if (isFinite(reduced[i][j])) reduced[i][j] -= minVal;
+          }
+          rowReductions[i] = minVal;
+          cost += minVal;
+        }
+      }
+      // Column reductions
+      for (let j = 0; j < n; j++) {
+        let minVal = Infinity;
+        for (let i = 0; i < n; i++) {
+          if (reduced[i][j] < minVal) minVal = reduced[i][j];
+        }
+        if (isFinite(minVal) && minVal > 0) {
+          for (let i = 0; i < n; i++) {
+            if (isFinite(reduced[i][j])) reduced[i][j] -= minVal;
+          }
+          colReductions[j] = minVal;
+          cost += minVal;
+        }
+      }
+      return { matrix: reduced, rowReductions, colReductions, cost };
+    }
+
+    function actualPathCost(path, dist) {
+      let c = 0;
+      for (let i = 0; i < path.length - 1; i++) {
+        c += dist[path[i]][path[i + 1]];
+      }
+      c += dist[path[path.length - 1]][path[0]];
+      return c;
+    }
+
+    // ---- Branch & Bound with safety limits ----
+    function tspBranchAndBound(dist, log) {
+      const n = dist.length;
+      const INF = Infinity;
+
+      // LIMITS – tune these if needed
+      const MAX_NODES = 80000;   // cap on explored nodes
+      const MAX_TIME_MS = 8000;  // cap on runtime in ms
+
+      let nodesExplored = 0;
+      let bestCost = Infinity;
+      let bestPath = null;
+      let aborted = false;
+
+      const initial = reduceMatrix(dist);
+      const rootMatrix = initial.matrix;
+      const rootBound = initial.cost;
+
+      const startTime = performance.now();
+
+      function dfs(matrix, path, bound, visitedMask) {
+        if (aborted) return;
+        const elapsed = performance.now() - startTime;
+        if (elapsed > MAX_TIME_MS || nodesExplored > MAX_NODES) {
+          aborted = true;
+          return;
+        }
+
+        nodesExplored++;
+
+        const nVisited = path.length;
+        const curr = path[path.length - 1];
+
+        if (nVisited === n) {
+          const total = actualPathCost(path, dist);
+          if (total < bestCost) {
+            bestCost = total;
+            bestPath = path.slice();
+          }
+          return;
+        }
+
+        for (let next = 0; next < n; next++) {
+          if (visitedMask & (1 << next)) continue;
+          const edgeCost = matrix[curr][next];
+          if (!isFinite(edgeCost)) continue;
+
+          // Create child matrix
+          const tmp = deepCopyMatrix(matrix);
+          for (let j = 0; j < n; j++) tmp[curr][j] = INF;
+          for (let i = 0; i < n; i++) tmp[i][next] = INF;
+          if (nVisited < n - 1) tmp[next][0] = INF;
+
+          const red = reduceMatrix(tmp);
+          const childBound = bound + edgeCost + red.cost;
+          if (childBound >= bestCost) continue;
+
+          path.push(next);
+          dfs(red.matrix, path, childBound, visitedMask | (1 << next));
+          path.pop();
+        }
+      }
+
+      dfs(rootMatrix, [0], rootBound, 1 << 0);
+
+      return {
+        n,
+        bestCost,
+        bestPath,
+        nodesExplored,
+        aborted,
+        maxNodes: MAX_NODES,
+        maxTimeMs: MAX_TIME_MS,
+        elapsedMs: performance.now() - startTime
+      };
+    }
+
+    runBtn.addEventListener("click", () => {
+      const file = fileInput.files[0];
+      if (!file) {
+        alert("Please select your edge-list .txt file first.");
+        return;
+      }
+
+      runBtn.disabled = true;
+      runBtn.textContent = "Running…";
+      logBox.textContent = "Reading file and building distance matrix…";
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const parsed = parseEdgeList(reader.result);
+        if (!parsed) {
+          alert("Could not parse file. Make sure lines look like: city_i city_j distance");
+          runBtn.disabled = false;
+          runBtn.textContent = "Run Branch & Bound";
+          return;
+        }
+
+        const { n, dist } = parsed;
+        nStat.textContent = n;
+        appendLog(`Parsed graph with ${n} cities.`);
+
+        appendLog("Starting Branch & Bound…");
+        const result = tspBranchAndBound(dist, appendLog);
+
+        runtimeStat.textContent = result.elapsedMs.toFixed(2) + " ms";
+        nodesStat.textContent = result.nodesExplored;
+
+        if (isFinite(result.bestCost) && result.bestPath) {
+          costStat.textContent = result.bestCost.toFixed(3);
+          const routeLabels = result.bestPath.map(i => i + 1);
+          resultRoute.textContent =
+            "Best tour (1-based cities): " +
+            "[" + routeLabels.join(" → ") + " → 1]";
+        } else {
+          costStat.textContent = "—";
+          resultRoute.textContent = "No complete tour found (search was cut off).";
+        }
+
+        if (result.aborted) {
+          statusStat.textContent = "Stopped (limit reached)";
+          appendLog(
+            `Search stopped early: exceeded ${result.maxNodes} nodes or ` +
+            `${result.maxTimeMs} ms.`
+          );
+        } else {
+          statusStat.textContent = "Completed";
+          appendLog("Search completed within limits.");
+        }
+
+        runBtn.disabled = false;
+        runBtn.textContent = "Run Branch & Bound";
+      };
+      reader.readAsText(file);
+    });
+  </script>
+</body>
+</html>

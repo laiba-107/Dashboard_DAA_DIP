@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>TSP Branch & Bound — Edge List Visualizer</title>
+  <style>
+    :root {
+      --bg: #020617;
+      --card: #020617;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.15);
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --danger: #f97373;
+      --border: #1e293b;
+      --best: #22c55e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #1f2937, #020617 60%);
+      color: var(--text);
+    }
+    h1 {
+      margin: 0 0 10px;
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    h1 span.logo-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 12px var(--accent);
+    }
+    .sub {
+      margin-bottom: 16px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(320px, 360px) minmax(380px, 1.4fr) minmax(280px, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+    .card {
+      background: linear-gradient(135deg, rgba(15,23,42,0.95), rgba(15,23,42,0.98));
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 18px 40px rgba(0,0,0,0.4);
+      padding: 14px 16px;
+    }
+    .card h2 {
+      font-size: 15px;
+      margin: 0 0 8px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    input[type="file"] {
+      width: 100%;
+      font-size: 13px;
+      color: var(--muted);
+      margin: 6px 0 10px;
+    }
+    button {
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--accent);
+      background: radial-gradient(circle at top, var(--accent), #0369a1);
+      color: #0b1120;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 0 12px rgba(56,189,248,0.5);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 18px rgba(56,189,248,0.8);
+      background: radial-gradient(circle at top, #38bdf8, #0284c7);
+    }
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .stat {
+      background: rgba(15,23,42,0.9);
+      border-radius: 12px;
+      border: 1px solid rgba(148,163,184,0.2);
+      padding: 6px 8px;
+      font-size: 11px;
+    }
+    .stat-label {
+      color: var(--muted);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .stat-value {
+      margin-top: 2px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    #bestRouteText {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--accent);
+      word-wrap: break-word;
+    }
+    #routeCanvas {
+      width: 100%;
+      height: 260px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: radial-gradient(circle at top, #0b1120, #020617 65%);
+      margin-top: 8px;
+    }
+    .helper {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    #treeContainer {
+      max-height: 480px;
+      overflow: auto;
+      padding-right: 4px;
+      font-size: 11px;
+    }
+    .tree-level {
+      margin-bottom: 8px;
+    }
+    .tree-level-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .tree-level-nodes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .tree-node {
+      border-radius: 999px;
+      padding: 4px 8px;
+      cursor: pointer;
+      border: 1px solid rgba(148,163,184,0.5);
+      background: rgba(15,23,42,0.9);
+      color: var(--muted);
+      transition: background 0.12s, transform 0.12s, border-color 0.12s, color 0.12s;
+      white-space: nowrap;
+    }
+    .tree-node:hover {
+      background: rgba(15,23,42,1);
+      transform: translateY(-1px);
+    }
+    .tree-node.selected {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+    .tree-node.best {
+      border-color: var(--best);
+      color: var(--best);
+    }
+    #matrixPanel {
+      font-size: 11px;
+    }
+    #matrixPanel h3 {
+      margin: 0 0 4px;
+      font-size: 13px;
+    }
+    #matrixPanel .meta {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    #matrixPanel table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 4px;
+      font-size: 11px;
+    }
+    #matrixPanel th, #matrixPanel td {
+      border: 1px solid rgba(51,65,85,0.9);
+      padding: 3px 4px;
+      text-align: center;
+    }
+    #matrixPanel th {
+      background: rgba(15,23,42,0.95);
+      color: var(--muted);
+    }
+    #matrixPanel td.inf {
+      color: var(--danger);
+      font-weight: 600;
+    }
+    #matrixPanel .reductions {
+      margin-top: 6px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    #matrixPanel .reductions div {
+      background: rgba(15,23,42,0.9);
+      border-radius: 8px;
+      border: 1px dashed rgba(148,163,184,0.4);
+      padding: 4px 6px;
+      flex: 1 1 120px;
+    }
+    #matrixPanel code {
+      font-size: 11px;
+      background: rgba(15,23,42,0.9);
+      padding: 2px 4px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <h1>
+    <span class="logo-dot"></span>
+    TSP Branch &amp; Bound — Edge List Visualizer
+  </h1>
+  <div class="sub">
+    Load a <code>.txt</code> file with lines like
+    <code>city_i city_j distance</code>, run Branch &amp; Bound
+    on the full benchmark, and explore the search tree.
+  </div>
+
+  <div class="layout">
+    <!-- Controls & stats -->
+    <div class="card">
+      <h2>
+        Input &amp; Run
+        <span class="pill">Edge list · TSP</span>
+      </h2>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">
+        Example lines:<br>
+        <code># Edge List for TSP</code><br>
+        <code># Format: city_i city_j distance</code><br>
+        <code>1 2 4726.65</code>
+      </div>
+      <input type="file" id="fileInput" accept=".txt" />
+      <button id="runBtn">Run Branch &amp; Bound</button>
+
+      <div class="stats-grid">
+        <div class="stat">
+          <div class="stat-label">Runtime</div>
+          <div class="stat-value" id="runtimeStat">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Nodes Explored</div>
+          <div class="stat-value" id="nodesStat">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Best Tour Cost</div>
+          <div class="stat-value" id="costStat">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Cities</div>
+          <div class="stat-value" id="nStat">—</div>
+        </div>
+      </div>
+
+      <div id="bestRouteText"></div>
+      <canvas id="routeCanvas"></canvas>
+      <div class="helper">
+        Cities are drawn on a circle; labels are 1-based city numbers.
+      </div>
+    </div>
+
+    <!-- Tree -->
+    <div class="card">
+      <h2>Search Tree</h2>
+      <div id="treeContainer">
+        Load a dataset and run the algorithm to see the tree.
+      </div>
+    </div>
+
+    <!-- Node details -->
+    <div class="card">
+      <h2>Node Details</h2>
+      <div id="matrixPanel">
+        <div class="helper">
+          Click any node in the tree to see its reduced cost matrix, row reductions, and column reductions.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById("fileInput");
+    const runBtn = document.getElementById("runBtn");
+    const runtimeStat = document.getElementById("runtimeStat");
+    const nodesStat = document.getElementById("nodesStat");
+    const costStat = document.getElementById("costStat");
+    const nStat = document.getElementById("nStat");
+    const bestRouteText = document.getElementById("bestRouteText");
+    const treeContainer = document.getElementById("treeContainer");
+    const matrixPanel = document.getElementById("matrixPanel");
+    const routeCanvas = document.getElementById("routeCanvas");
+
+    // Global data for current run
+    let globalTreeNodes = [];
+    let globalBestPath = null;
+    let globalBestCost = Infinity;
+    let globalBestLeafId = null;
+    let globalN = 0;
+
+    // Parse edge list file into distance matrix
+    function parseEdgeList(text) {
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+      const edges = [];
+      let maxCity = 0;
+
+      for (const line of lines) {
+        if (line.startsWith("#")) continue; // skip comments
+        const parts = line.split(/\s+/);
+        if (parts.length < 3) continue;
+        const i = parseInt(parts[0], 10);
+        const j = parseInt(parts[1], 10);
+        const d = parseFloat(parts[2]);
+        if (Number.isNaN(i) || Number.isNaN(j) || Number.isNaN(d)) continue;
+        edges.push({ i, j, d });
+        if (i > maxCity) maxCity = i;
+        if (j > maxCity) maxCity = j;
+      }
+
+      if (!edges.length || maxCity === 0) return null;
+
+      const n = maxCity;
+      const INF = Infinity;
+      const dist = Array.from({ length: n }, () => Array(n).fill(INF));
+
+      // fill edges (symmetric)
+      for (const e of edges) {
+        const a = e.i - 1;
+        const b = e.j - 1;
+        dist[a][b] = e.d;
+        dist[b][a] = e.d;
+      }
+
+      // infinite self distance
+      for (let i = 0; i < n; i++) dist[i][i] = INF;
+
+      return { n, dist };
+    }
+
+    function deepCopyMatrix(mat) {
+      return mat.map(row => row.slice());
+    }
+
+    function reduceMatrix(matrix) {
+      const n = matrix.length;
+      const reduced = deepCopyMatrix(matrix);
+      const rowReductions = new Array(n).fill(0);
+      const colReductions = new Array(n).fill(0);
+      let cost = 0;
+
+      // Row reductions
+      for (let i = 0; i < n; i++) {
+        let minVal = Infinity;
+        for (let j = 0; j < n; j++) {
+          if (reduced[i][j] < minVal) minVal = reduced[i][j];
+        }
+        if (isFinite(minVal) && minVal > 0) {
+          for (let j = 0; j < n; j++) {
+            if (isFinite(reduced[i][j])) reduced[i][j] -= minVal;
+          }
+          rowReductions[i] = minVal;
+          cost += minVal;
+        }
+      }
+
+      // Column reductions
+      for (let j = 0; j < n; j++) {
+        let minVal = Infinity;
+        for (let i = 0; i < n; i++) {
+          if (reduced[i][j] < minVal) minVal = reduced[i][j];
+        }
+        if (isFinite(minVal) && minVal > 0) {
+          for (let i = 0; i < n; i++) {
+            if (isFinite(reduced[i][j])) reduced[i][j] -= minVal;
+          }
+          colReductions[j] = minVal;
+          cost += minVal;
+        }
+      }
+
+      return { matrix: reduced, rowReductions, colReductions, cost };
+    }
+
+    function actualPathCost(path, dist) {
+      let c = 0;
+      for (let i = 0; i < path.length - 1; i++) {
+        c += dist[path[i]][path[i + 1]];
+      }
+      c += dist[path[path.length - 1]][path[0]];
+      return c;
+    }
+
+    function tspBranchAndBound(dist) {
+      const n = dist.length;
+      const treeNodes = [];
+      let bestPath = null;
+      let bestCost = Infinity;
+      let bestLeafId = null;
+
+      const initial = reduceMatrix(dist);
+      const rootNode = {
+        id: 0,
+        parentId: -1,
+        level: 1,
+        path: [0], // start at city 0 (label 1 for user)
+        bound: initial.cost,
+        reducedMatrix: initial.matrix,
+        rowReductions: initial.rowReductions,
+        colReductions: initial.colReductions
+      };
+      treeNodes.push(rootNode);
+
+      const INF = Infinity;
+
+      function dfs(node, visitedMask) {
+        const visitedCount = node.path.length;
+        const curr = node.path[node.path.length - 1];
+
+        if (visitedCount === n) {
+          const totalCost = actualPathCost(node.path, dist);
+          if (totalCost < bestCost) {
+            bestCost = totalCost;
+            bestPath = node.path.slice();
+            bestLeafId = node.id;
+          }
+          return;
+        }
+
+        for (let next = 0; next < n; next++) {
+          if (visitedMask & (1 << next)) continue;
+          const edgeCost = node.reducedMatrix[curr][next];
+          if (!isFinite(edgeCost)) continue;
+
+          let tmp = deepCopyMatrix(node.reducedMatrix);
+          for (let j = 0; j < n; j++) tmp[curr][j] = INF;
+          for (let i = 0; i < n; i++) tmp[i][next] = INF;
+          if (visitedCount < n - 1) tmp[next][0] = INF;
+
+          const red = reduceMatrix(tmp);
+          const childBound = node.bound + edgeCost + red.cost;
+          if (childBound >= bestCost) continue;
+
+          const childNode = {
+            id: treeNodes.length,
+            parentId: node.id,
+            level: node.level + 1,
+            path: [...node.path, next],
+            bound: childBound,
+            reducedMatrix: red.matrix,
+            rowReductions: red.rowReductions,
+            colReductions: red.colReductions
+          };
+          treeNodes.push(childNode);
+          dfs(childNode, visitedMask | (1 << next));
+        }
+      }
+
+      dfs(rootNode, 1 << 0);
+
+      return {
+        bestCost,
+        bestPath,
+        nodesExplored: treeNodes.length,
+        treeNodes,
+        bestLeafId
+      };
+    }
+
+    function renderTree() {
+      if (!globalTreeNodes.length) {
+        treeContainer.textContent = "No tree to display.";
+        return;
+      }
+      const levels = new Map();
+      for (const node of globalTreeNodes) {
+        if (!levels.has(node.level)) levels.set(node.level, []);
+        levels.get(node.level).push(node);
+      }
+      let html = "";
+      const maxLevel = Math.max(...levels.keys());
+      for (let lvl = 1; lvl <= maxLevel; lvl++) {
+        const nodes = levels.get(lvl) || [];
+        if (!nodes.length) continue;
+        html += `<div class="tree-level">
+          <div class="tree-level-label">Depth ${lvl}</div>
+          <div class="tree-level-nodes">`;
+        for (const node of nodes) {
+          const isBest = globalBestPath && JSON.stringify(node.path) === JSON.stringify(globalBestPath);
+          html += `<div class="tree-node${isBest ? " best" : ""}" data-id="${node.id}">
+            P:[${node.path.map(i => i+1).join("→")}] · B:${node.bound.toFixed(1)}
+          </div>`;
+        }
+        html += `</div></div>`;
+      }
+      treeContainer.innerHTML = html;
+    }
+
+    function showNodeDetails(nodeId) {
+      const node = globalTreeNodes.find(n => n.id === nodeId);
+      if (!node) return;
+
+      document.querySelectorAll(".tree-node").forEach(el => el.classList.remove("selected"));
+      const clicked = treeContainer.querySelector(`.tree-node[data-id="${nodeId}"]`);
+      if (clicked) clicked.classList.add("selected");
+
+      const n = node.reducedMatrix.length;
+      let tableHtml = "<table><thead><tr><th></th>";
+      for (let j = 0; j < n; j++) tableHtml += `<th>${j+1}</th>`;
+      tableHtml += "</tr></thead><tbody>";
+      for (let i = 0; i < n; i++) {
+        tableHtml += `<tr><th>${i+1}</th>`;
+        for (let j = 0; j < n; j++) {
+          const v = node.reducedMatrix[i][j];
+          if (!isFinite(v)) tableHtml += `<td class="inf">∞</td>`;
+          else tableHtml += `<td>${v.toFixed(1)}</td>`;
+        }
+        tableHtml += "</tr>";
+      }
+      tableHtml += "</tbody></table>";
+
+      const rowRedStr = node.rowReductions.map((v, i) => `${i+1}:${v.toFixed(1)}`).join(", ");
+      const colRedStr = node.colReductions.map((v, j) => `${j+1}:${v.toFixed(1)}`).join(", ");
+
+      matrixPanel.innerHTML = `
+        <h3>Node #${node.id}</h3>
+        <div class="meta">
+          Path: <code>[${node.path.map(i => i+1).join(" → ")} → 1]</code><br/>
+          Depth: <strong>${node.level}</strong> · Bound: <strong>${node.bound.toFixed(3)}</strong>
+        </div>
+        ${tableHtml}
+        <div class="reductions">
+          <div><strong>Row Reductions</strong><br/><code>${rowRedStr || "none"}</code></div>
+          <div><strong>Column Reductions</strong><br/><code>${colRedStr || "none"}</code></div>
+        </div>
+      `;
+    }
+
+    function drawBestRoute(n, path) {
+      const canvas = routeCanvas;
+      const ctx = canvas.getContext("2d");
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * window.devicePixelRatio;
+      canvas.height = rect.height * window.devicePixelRatio;
+      ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+
+      ctx.clearRect(0, 0, rect.width, rect.height);
+      if (!path || !n) return;
+
+      const cx = rect.width / 2;
+      const cy = rect.height / 2;
+      const radius = Math.min(rect.width, rect.height) / 2 - 40;
+
+      // Precompute circular coordinates for each city
+      const coords = [];
+      for (let i = 0; i < n; i++) {
+        const angle = 2 * Math.PI * i / n - Math.PI / 2;
+        coords.push({
+          x: cx + radius * Math.cos(angle),
+          y: cy + radius * Math.sin(angle)
+        });
+      }
+
+      const fullPath = [...path, path[0]];
+
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#38bdf8";
+      ctx.beginPath();
+      fullPath.forEach((idx, k) => {
+        const p = coords[idx];
+        if (k === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
+      ctx.stroke();
+
+      fullPath.slice(0, -1).forEach(idx => {
+        const p = coords[idx];
+        ctx.beginPath();
+        ctx.fillStyle = idx === 0 ? "#22c55e" : "#e5e7eb";
+        ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#e5e7eb";
+        ctx.font = "11px system-ui";
+        ctx.fillText(String(idx+1), p.x + 7, p.y - 7);
+      });
+    }
+
+    treeContainer.addEventListener("click", (e) => {
+      const nodeEl = e.target.closest(".tree-node");
+      if (!nodeEl) return;
+      const id = parseInt(nodeEl.dataset.id, 10);
+      showNodeDetails(id);
+    });
+
+    runBtn.addEventListener("click", () => {
+      const file = fileInput.files[0];
+      if (!file) {
+        alert("Please select your edge-list .txt file first.");
+        return;
+      }
+      runBtn.disabled = true;
+      runBtn.textContent = "Running...";
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const parsed = parseEdgeList(reader.result);
+        if (!parsed) {
+          alert("Could not parse file. Make sure lines are like: city_i city_j distance");
+          runBtn.disabled = false;
+          runBtn.textContent = "Run Branch & Bound";
+          return;
+        }
+
+        const { n, dist } = parsed;
+        globalN = n;
+
+        const t0 = performance.now();
+        const result = tspBranchAndBound(dist);
+        const t1 = performance.now();
+        const runtimeMs = t1 - t0;
+
+        globalTreeNodes = result.treeNodes;
+        globalBestPath = result.bestPath;
+        globalBestCost = result.bestCost;
+        globalBestLeafId = result.bestLeafId;
+
+        runtimeStat.textContent = runtimeMs.toFixed(2) + " ms";
+        nodesStat.textContent = result.nodesExplored;
+        costStat.textContent = isFinite(result.bestCost) ? result.bestCost.toFixed(3) : "—";
+        nStat.textContent = n;
+
+        if (result.bestPath) {
+          const pathLabels = result.bestPath.map(i => i+1);
+          bestRouteText.textContent =
+            "Best tour: [" + pathLabels.join(" → ") + " → 1]";
+          drawBestRoute(n, result.bestPath);
+        } else {
+          bestRouteText.textContent = "No feasible tour found.";
+          drawBestRoute(null, null);
+        }
+
+        renderTree();
+        if (globalBestLeafId !== null) {
+          showNodeDetails(globalBestLeafId);
+        } else {
+          matrixPanel.innerHTML = `<div class="helper">No node details (no feasible route).</div>`;
+        }
+
+        runBtn.disabled = false;
+        runBtn.textContent = "Run Branch & Bound";
+      };
+      reader.readAsText(file);
+    });
+
+    window.addEventListener("resize", () => {
+      if (globalBestPath && globalN) {
+        drawBestRoute(globalN, globalBestPath);
+      }
+    });
+  </script>
+</body>
+</html>

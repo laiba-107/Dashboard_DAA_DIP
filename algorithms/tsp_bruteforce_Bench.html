@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Brute Force TSP — From .txt File</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #020617;
+      --card: #020b1f;
+      --border: #1e293b;
+      --accent: #38bdf8;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #020617 0, #000 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(90deg, #020617, #020818);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.3rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .logo {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, #38bdf8, #0f172a 70%);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      color: white;
+      box-shadow: 0 0 0 1px rgba(148,163,184,0.4);
+    }
+    .subtitle {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.7);
+      font-size: 0.75rem;
+      color: var(--muted);
+      background: rgba(15,23,42,0.9);
+    }
+    .pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 3px rgba(56,189,248,0.35);
+    }
+    main {
+      flex: 1;
+      padding: 18px 20px 24px;
+      display: flex;
+      justify-content: center;
+    }
+    .card {
+      width: 100%;
+      max-width: 840px;
+      background: radial-gradient(circle at top left, #020b1f, #020617 60%);
+      border-radius: 18px;
+      border: 1px solid rgba(30,41,59,0.9);
+      box-shadow: 0 18px 40px rgba(15,23,42,0.85);
+      padding: 16px 18px 18px;
+    }
+    .card p {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 0;
+      margin-bottom: 12px;
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    input[type="file"] {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    button {
+      border-radius: 999px;
+      border: 1px solid rgba(56,189,248,0.7);
+      background: radial-gradient(circle at 20% 0, #38bdf8, #0f172a 70%);
+      color: white;
+      padding: 6px 13px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.12s, box-shadow 0.12s;
+      box-shadow: 0 6px 20px rgba(15,23,42,0.85);
+      white-space: nowrap;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 30px rgba(15,23,42,0.9);
+    }
+    button:disabled {
+      opacity: 0.45;
+      cursor: default;
+      transform: none;
+      box-shadow: none;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 0.8rem;
+    }
+    .stat {
+      padding: 6px 8px;
+      border-radius: 12px;
+      border: 1px solid rgba(148,163,184,0.4);
+      background: rgba(15,23,42,0.9);
+    }
+    .stat-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .stat-value {
+      margin-top: 2px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    pre {
+      margin: 0;
+      margin-top: 8px;
+      font-size: 0.8rem;
+      background: rgba(15,23,42,0.92);
+      border-radius: 12px;
+      border: 1px solid rgba(30,64,175,0.7);
+      padding: 8px 10px;
+      white-space: pre-wrap;
+      max-height: 260px;
+      overflow: auto;
+    }
+    footer {
+      font-size: 0.7rem;
+      color: var(--muted);
+      padding: 6px 18px 10px;
+      text-align: right;
+      border-top: 1px solid rgba(15,23,42,0.9);
+      background: rgba(2,6,23,0.98);
+    }
+    @media (max-width: 720px) {
+      .stats { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>
+      <span class="logo">T</span>
+      Brute Force — TSP (from .txt)
+    </h1>
+    <div class="subtitle">
+      Reads edge list from file, tries all tours starting at city 1, and prints the best route &amp; cost.
+    </div>
+  </div>
+  <div class="pill">
+    <span class="pill-dot"></span>
+    <span>Brute force · complexity (n−1)!</span>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <p>
+      File format (edge list):<br />
+      <code># comments allowed</code><br />
+      <code>1 2 10.5</code><br />
+      <code>1 3 7.2</code><br />
+      <code>2 3 3.0</code><br />
+      Cities are numbered 1..n. Graph is treated as symmetric (undirected).
+    </p>
+
+    <div class="row">
+      <input type="file" id="fileInput" accept=".txt" />
+      <button id="runBtn">Run brute force</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">Cities</div>
+        <div class="stat-value" id="nStat">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Best cost</div>
+        <div class="stat-value" id="costStat">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Permutations</div>
+        <div class="stat-value" id="permStat">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Runtime</div>
+        <div class="stat-value" id="timeStat">—</div>
+      </div>
+    </div>
+
+    <pre id="output">Waiting for file…</pre>
+  </div>
+</main>
+
+<footer>
+  Brute force fixes start city as 1 and tests all permutations of {2,3,…,n}, then adds return to city 1.
+</footer>
+
+<script>
+  const fileInput = document.getElementById("fileInput");
+  const runBtn = document.getElementById("runBtn");
+  const nStat = document.getElementById("nStat");
+  const costStat = document.getElementById("costStat");
+  const permStat = document.getElementById("permStat");
+  const timeStat = document.getElementById("timeStat");
+  const output = document.getElementById("output");
+
+  function parseEdgeList(text) {
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+    const edges = [];
+    let maxCity = 0;
+
+    for (const line of lines) {
+      if (line.startsWith("#")) continue;
+      const parts = line.split(/\s+/);
+      if (parts.length < 3) continue;
+      const i = parseInt(parts[0], 10);
+      const j = parseInt(parts[1], 10);
+      const d = parseFloat(parts[2]);
+      if (Number.isNaN(i) || Number.isNaN(j) || Number.isNaN(d)) continue;
+      edges.push({ i, j, d });
+      maxCity = Math.max(maxCity, i, j);
+    }
+
+    if (!edges.length || maxCity === 0) return null;
+
+    const n = maxCity;
+    const INF = Infinity;
+    const dist = Array.from({ length: n }, () => Array(n).fill(INF));
+    for (const e of edges) {
+      const a = e.i - 1;
+      const b = e.j - 1;
+      dist[a][b] = e.d;
+      dist[b][a] = e.d; // symmetric
+    }
+    for (let i = 0; i < n; i++) dist[i][i] = INF;
+
+    return { n, dist };
+  }
+
+  function bruteForceTSP(dist) {
+    const n = dist.length;
+    const cities = [];
+    for (let i = 1; i < n; i++) cities.push(i); // start fixed at 0 (city 1)
+
+    let bestCost = Infinity;
+    let bestPerm = null;
+    let perms = 0;
+
+    function permute(arr, l) {
+      if (l === arr.length) {
+        perms++;
+        const path = [0, ...arr, 0];
+        let cost = 0;
+        let feasible = true;
+        for (let i = 0; i < path.length - 1; i++) {
+          const c = dist[path[i]][path[i+1]];
+          if (!isFinite(c)) { feasible = false; break; }
+          cost += c;
+        }
+        if (feasible && cost < bestCost) {
+          bestCost = cost;
+          bestPerm = path.slice();
+        }
+        return;
+      }
+      for (let i = l; i < arr.length; i++) {
+        [arr[l], arr[i]] = [arr[i], arr[l]];
+        permute(arr, l + 1);
+        [arr[l], arr[i]] = [arr[i], arr[l]];
+      }
+    }
+
+    permute(cities, 0);
+
+    return { bestCost, bestPath: bestPerm, permutations: perms };
+  }
+
+  runBtn.addEventListener("click", () => {
+    const file = fileInput.files[0];
+    if (!file) {
+      alert("Please select a .txt file first.");
+      return;
+    }
+
+    runBtn.disabled = true;
+    runBtn.textContent = "Running…";
+    output.textContent = "Reading file and building distance matrix…";
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const parsed = parseEdgeList(reader.result);
+      if (!parsed) {
+        alert("Could not parse file. Make sure lines are like: i j cost");
+        runBtn.disabled = false;
+        runBtn.textContent = "Run brute force";
+        output.textContent = "Parsing failed.";
+        return;
+      }
+
+      const { n, dist } = parsed;
+      nStat.textContent = n;
+
+      if (n > 10) {
+        output.textContent =
+          `WARNING: n = ${n}. Brute force is (n-1)!; this may be extremely slow.\n` +
+          `If you still want to try, reduce your instance first.`;
+        runBtn.disabled = false;
+        runBtn.textContent = "Run brute force";
+        return;
+      }
+
+      output.textContent = `Parsed graph with ${n} cities. Running brute force (start = 1)…`;
+      const t0 = performance.now();
+      const res = bruteForceTSP(dist);
+      const t1 = performance.now();
+      const runtimeMs = t1 - t0;
+
+      permStat.textContent = res.permutations;
+      timeStat.textContent = runtimeMs.toFixed(2) + " ms";
+
+      if (res.bestPath && isFinite(res.bestCost)) {
+        costStat.textContent = res.bestCost.toFixed(3);
+        const route1Based = res.bestPath.map(i => i + 1);
+        output.textContent =
+          `Best tour (1-based): [${route1Based.join(" → ")}]\n` +
+          `Best cost: ${res.bestCost}\n` +
+          `Cities: ${n}\n` +
+          `Permutations checked: ${res.permutations}\n` +
+          `Runtime: ${runtimeMs.toFixed(2)} ms`;
+      } else {
+        costStat.textContent = "∞";
+        output.textContent =
+          `No feasible Hamiltonian cycle found (at least one tour contained ∞ edge).\n` +
+          `Cities: ${n}\n` +
+          `Permutations checked: ${res.permutations}\n` +
+          `Runtime: ${runtimeMs.toFixed(2)} ms`;
+      }
+
+      runBtn.disabled = false;
+      runBtn.textContent = "Run brute force";
+    };
+    reader.readAsText(file);
+  });
+</script>
+</body>
+</html>
